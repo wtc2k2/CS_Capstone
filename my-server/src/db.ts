@@ -1,9 +1,13 @@
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
-// Singleton — reuse the same client across the server lifetime.
-// Prisma 7: pass datasourceUrl directly since schema.prisma no longer has url field.
-const prisma = new PrismaClient({
-  datasourceUrl: process.env.DATABASE_URL,
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
 });
+const adapter = new PrismaPg(pool);
+
+const prisma = new PrismaClient({ adapter } as any);
 
 export default prisma;
