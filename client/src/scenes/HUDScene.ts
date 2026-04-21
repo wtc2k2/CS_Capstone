@@ -32,6 +32,8 @@ export class HUDScene extends Phaser.Scene {
   private waitingPlayerCount = 0;
   private timerText?: Phaser.GameObjects.Text;
   private timeRemaining = 0;
+  private gameDuration = 300; // default — updated from state
+  private warningShown = false;
 
   // Waiting room UI
   private waitingTitle!: Phaser.GameObjects.Text;
@@ -41,6 +43,7 @@ export class HUDScene extends Phaser.Scene {
 
   private inventoryContainer?: Phaser.GameObjects.Container;
   private inventorySlotImages: (Phaser.GameObjects.Sprite | null)[] = [null, null, null];
+  private bombSlotImage: Phaser.GameObjects.Image | null = null;
 
   private readonly MINIMAP_W = 160;
   private readonly MINIMAP_H = 120;
@@ -249,6 +252,9 @@ export class HUDScene extends Phaser.Scene {
     });
     this.gameScene.events.on('inventoryChanged', (count: number) => {
       this.updateInventoryDisplay(count);
+    });
+    this.gameScene.events.on('bombCountChanged', (count: number) => {
+      this.updateBombSlotDisplay(count);
     });
 
     // Auto-connect: lobby already established the room — always prefer that over reconnect token
@@ -483,6 +489,7 @@ export class HUDScene extends Phaser.Scene {
       this.inventoryContainer.destroy();
       this.inventoryContainer = undefined;
       this.inventorySlotImages = [null, null, null];
+      this.bombSlotImage = null;
     }
 
     // Destroy game over overlay if still showing
@@ -505,6 +512,7 @@ export class HUDScene extends Phaser.Scene {
     if (this.confirmedText) { this.confirmedText.destroy(); this.confirmedText = undefined; }
     if (this.tagIcon) { this.tagIcon.destroy(); this.tagIcon = undefined; }
     this.timeRemaining = 0;
+    this.warningShown = false;
 
     // Show waiting room UI
     this.waitingTitle.setVisible(true);
@@ -622,7 +630,22 @@ export class HUDScene extends Phaser.Scene {
     const secs = this.timeRemaining % 60;
     this.timerText.setText(`${mins}:${secs.toString().padStart(2, '0')}`);
     this.timerText.setColor(this.timeRemaining <= 30 ? '#ff4444' : '#ffffff');
-    if (this.timeRemaining === 120) this.showTimerWarning('2 MINUTES REMAINING');
+
+    // Pull game duration from room state the first time we see it so the warning threshold is accurate
+    const room = getRoom();
+    const stateDur = (room?.state as any)?.gameDuration;
+    if (typeof stateDur === 'number' && stateDur > 0) this.gameDuration = stateDur;
+
+    // Warning thresholds by duration: 5min → 2min left, 3min → 1min left, 2min → 30s left
+    const warnAt = this.gameDuration >= 300 ? 120
+                 : this.gameDuration >= 180 ? 60
+                 : 30;
+    const label  = warnAt >= 60 ? `${warnAt / 60} MINUTE${warnAt === 60 ? '' : 'S'} REMAINING`
+                                 : `${warnAt} SECONDS REMAINING`;
+    if (!this.warningShown && this.timeRemaining === warnAt) {
+      this.warningShown = true;
+      this.showTimerWarning(label);
+    }
   }
 
   private showTimerWarning(message: string): void {
@@ -793,7 +816,7 @@ export class HUDScene extends Phaser.Scene {
 
     const bg = this.add.graphics();
     bg.fillStyle(0x000000, 0.55);
-    bg.fillRoundedRect(-76, -22, 152, 44, 6);
+    bg.fillRoundedRect(-76, -22, 198, 44, 6);
     container.add(bg);
 
     const label = this.add.text(-70, -18, '🔥', {
@@ -822,8 +845,23 @@ export class HUDScene extends Phaser.Scene {
       this.inventorySlotImages[i] = img;
     }
 
+    // Bomb slot — sits to the right of the 3 fireball slots
+    const bombX = startX + 3 * (SLOT_SIZE + SLOT_GAP) + 6;
+    const bombSlot = this.add.graphics();
+    bombSlot.lineStyle(2, 0xcc3333, 0.9);
+    bombSlot.strokeRect(bombX, -SLOT_SIZE / 2, SLOT_SIZE, SLOT_SIZE);
+    bombSlot.fillStyle(0x111111, 0.4);
+    bombSlot.fillRect(bombX + 1, -SLOT_SIZE / 2 + 1, SLOT_SIZE - 2, SLOT_SIZE - 2);
+    container.add(bombSlot);
+
+    const bombImg = this.add.image(bombX + SLOT_SIZE / 2, 0, 'bomb-pickup');
+    bombImg.setDisplaySize(SLOT_SIZE - 4, SLOT_SIZE - 4).setVisible(false);
+    container.add(bombImg);
+    this.bombSlotImage = bombImg;
+
     this.inventoryContainer = container;
     this.updateInventoryDisplay(0);
+    this.updateBombSlotDisplay(0);
   }
 
   private updateInventoryDisplay(count: number): void {
@@ -831,6 +869,10 @@ export class HUDScene extends Phaser.Scene {
       const img = this.inventorySlotImages[i];
       if (img) img.setVisible(i < count);
     }
+  }
+
+  private updateBombSlotDisplay(count: number): void {
+    if (this.bombSlotImage) this.bombSlotImage.setVisible(count > 0);
   }
 
   private drawHpBar(ratio: number): void {

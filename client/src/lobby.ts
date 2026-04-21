@@ -83,6 +83,131 @@ bgMusic.play().catch(() => {
 
 const USERNAME_KEY = 'cc_username';
 const CHARACTER_KEY = 'cc_character';
+const LANDING_KEY = 'cc_seen_landing';
+
+interface OnboardingStep {
+  title: string;
+  image: string;
+  caption: string;
+}
+const ONBOARDING_STEPS: OnboardingStep[] = [
+  {
+    title: 'SIGN UP OR SIGN IN',
+    image: '/getting-started/step1.png',
+    caption: 'Create an account or sign in to get started.',
+  },
+  {
+    title: 'CREATE A USERNAME',
+    image: '/getting-started/step2.png',
+    caption: 'Pick a name your friends will see in the arena.',
+  },
+  {
+    title: 'HOST OR JOIN A GAME',
+    image: '/getting-started/step3.png',
+    caption: 'Start a new match, or join one with a code.',
+  },
+  {
+    title: 'SELECT YOUR CHARACTER',
+    image: '/getting-started/step4.png',
+    caption: "Don't forget to pick your fighter from the LOCKER tab.",
+  },
+  {
+    title: 'JUMP IN AND HAVE FUN',
+    image: '/getting-started/step5.png',
+    caption: 'Wait for the host to start the match. Good luck!',
+  },
+];
+
+function showLanding(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const screen = document.getElementById('landing-screen')!;
+    const startBtn = document.getElementById('landing-get-started')!;
+    const skipBtn = document.getElementById('landing-skip')!;
+    screen.classList.remove('hidden');
+
+    let done = false;
+    const cleanup = (skip: boolean) => {
+      if (done) return;
+      done = true;
+      screen.classList.add('hidden');
+      startBtn.removeEventListener('click', onStart);
+      skipBtn.removeEventListener('click', onSkip);
+      resolve();
+      if (skip) {
+        // Signal to caller via flag — handled in initLobby
+        (window as any).__ccLandingSkipped = true;
+      }
+    };
+    const onStart = () => { playMenuClick(); cleanup(false); };
+    const onSkip = () => { playMenuClick(); cleanup(true); };
+    startBtn.addEventListener('click', onStart);
+    skipBtn.addEventListener('click', onSkip);
+  });
+}
+
+function showOnboarding(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const screen = document.getElementById('onboarding-screen')!;
+    const badge = document.getElementById('onboarding-step-badge')!;
+    const title = document.getElementById('onboarding-title')!;
+    const img = document.getElementById('onboarding-image') as HTMLImageElement;
+    const caption = document.getElementById('onboarding-caption')!;
+    const back = document.getElementById('onboarding-back') as HTMLButtonElement;
+    const next = document.getElementById('onboarding-next') as HTMLButtonElement;
+    const dots = Array.from(document.querySelectorAll('#onboarding-dots .onboarding-dot')) as HTMLElement[];
+
+    let idx = 0;
+    const render = () => {
+      const step = ONBOARDING_STEPS[idx];
+      badge.textContent = `STEP ${idx + 1} OF ${ONBOARDING_STEPS.length}`;
+      title.textContent = step.title;
+      img.src = step.image;
+      img.alt = step.title;
+      caption.textContent = step.caption;
+      dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+      back.disabled = idx === 0;
+      const isLast = idx === ONBOARDING_STEPS.length - 1;
+      next.textContent = isLast ? "LET'S PLAY" : 'NEXT ›';
+      next.classList.toggle('final', isLast);
+    };
+
+    const onBack = () => {
+      if (idx === 0) return;
+      playMenuClick();
+      idx--;
+      render();
+    };
+    const onNext = () => {
+      playMenuClick();
+      if (idx < ONBOARDING_STEPS.length - 1) {
+        idx++;
+        render();
+      } else {
+        cleanup();
+      }
+    };
+    const cleanup = () => {
+      screen.classList.add('hidden');
+      back.removeEventListener('click', onBack);
+      next.removeEventListener('click', onNext);
+      resolve();
+    };
+
+    back.addEventListener('click', onBack);
+    next.addEventListener('click', onNext);
+    render();
+    screen.classList.remove('hidden');
+  });
+}
+
+async function showLandingFlow(): Promise<void> {
+  (window as any).__ccLandingSkipped = false;
+  await showLanding();
+  if (!(window as any).__ccLandingSkipped) {
+    await showOnboarding();
+  }
+  localStorage.setItem(LANDING_KEY, '1');
+}
 
 export interface LobbyResult {
   username: string;
@@ -96,6 +221,10 @@ export interface LobbyResult {
 
 export function initLobby(): Promise<LobbyResult> {
   return new Promise(async (resolve) => {
+    if (!localStorage.getItem(LANDING_KEY)) {
+      await showLandingFlow();
+    }
+
     const clerk = await requireAuth();
     const clerkUser = clerk.user!;
     const clerkId = clerkUser.id;
@@ -390,6 +519,8 @@ function showLobby(username: string, resolve: (r: LobbyResult) => void, clerkId:
   let roomCode = '';
   let maxPlayers = 10;
   let gameMode = 'ffa';
+  let duration = 300; // seconds — 2 min / 3 min / 5 min
+  let density = 2; // 1 = few, 2 = normal, 4 = many
 
   // Mode buttons
   const hostBtn = document.getElementById('host-btn')!;
@@ -457,6 +588,28 @@ function showLobby(username: string, resolve: (r: LobbyResult) => void, clerkId:
       playMenuClick();
       maxPlayers = Number(btn.id.replace('mp-', ''));
       mpBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // ── Host: game duration selector ──
+  const durBtns = [120, 180, 300].map(n => document.getElementById(`dur-${n}`)!);
+  durBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      playMenuClick();
+      duration = Number(btn.id.replace('dur-', ''));
+      durBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // ── Host: item density selector ──
+  const densBtns = [1, 2, 4].map(n => document.getElementById(`dens-${n}`)!);
+  densBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      playMenuClick();
+      density = Number(btn.id.replace('dens-', ''));
+      densBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     });
   });
@@ -622,7 +775,7 @@ function showLobby(username: string, resolve: (r: LobbyResult) => void, clerkId:
 
     if (mode === 'host') {
       try {
-        await createRoom(username, isPrivate, classData.spriteKey, maxPlayers, clerkId, gameMode);
+        await createRoom(username, isPrivate, classData.spriteKey, maxPlayers, clerkId, gameMode, duration, density);
         await launchGame();
         resolve({ username, clerkId, mode, isPrivate, roomCode, classData, gameMode });
       } catch (err) {

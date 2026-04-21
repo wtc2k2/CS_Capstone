@@ -47,9 +47,9 @@ export async function autoJoin(name: string, spriteKey = 'adventurer'): Promise<
   return setupRoom(r);
 }
 
-export async function createRoom(name: string, isPrivate = false, spriteKey = 'adventurer', maxPlayers = 10, clerkId = '', gameMode = 'ffa'): Promise<Room> {
+export async function createRoom(name: string, isPrivate = false, spriteKey = 'adventurer', maxPlayers = 10, clerkId = '', gameMode = 'ffa', duration = 300, density = 1): Promise<Room> {
   const c = initClient();
-  const r = await c.create('my_room', { name, isPrivate, spriteKey, maxPlayers, clerkId, gameMode });
+  const r = await c.create('my_room', { name, isPrivate, spriteKey, maxPlayers, clerkId, gameMode, duration, density });
   return setupRoom(r);
 }
 
@@ -124,6 +124,11 @@ export function sendPickupCollect(type: string, idx: number): void {
 export function sendPickupRespawnPos(type: string, idx: number, wx: number, wy: number): void {
   if (!room) return;
   room.send('pickupRespawnPos', { type, idx, wx, wy });
+}
+
+export function sendBombDropped(x: number, y: number): void {
+  if (!room) return;
+  room.send('bombDropped', { x, y });
 }
 
 export function sendEndGame(): void {
