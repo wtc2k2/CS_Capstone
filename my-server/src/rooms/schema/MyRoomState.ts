@@ -27,4 +27,6 @@ export class MyRoomState extends Schema {
   @type("number") pickupSeed: number = 0;
   @type("string") gameMode: string = "ffa";
   @type("number") scoreLimit: number = 0;
+  @type("number") gameDuration: number = 300; // seconds
+  @type("number") density: number = 1; // 1=few, 2=normal, 4=many
 }

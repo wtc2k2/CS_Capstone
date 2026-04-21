@@ -12,7 +12,7 @@ import {
 import { ClassData, DEFAULT_CLASS, CHARACTERS } from '../data/Classes';
 import { Player } from '../entities/Player';
 import { RemotePlayer } from '../entities/RemotePlayer';
-import { sendPosition, sendAttack, sendSwing, sendEndGame, sendFireball, sendFireballLaunched, sendPickupCollect, sendPickupRespawnPos, sendTagCollect } from '../network/Network';
+import { sendPosition, sendAttack, sendSwing, sendEndGame, sendFireball, sendFireballLaunched, sendPickupCollect, sendPickupRespawnPos, sendTagCollect, sendBombDropped } from '../network/Network';
 import { Room, getStateCallbacks } from '@colyseus/sdk';
 
 interface ActiveProjectile {
@@ -69,6 +69,12 @@ export class GameScene extends Phaser.Scene {
   private remoteProjectiles: ActiveProjectile[] = [];
   private pickupItems: PickupItem[] = [];
   private healthPickups: PickupItem[] = [];
+  private bombPickups: PickupItem[] = [];
+  private bombCount = 0;
+  private readonly MAX_BOMBS = 1;
+  private readonly BOMB_FUSE_MS = 2000;
+  private readonly BOMB_RADIUS_PX = 5 * TILE_SIZE; // 5-tile radius = 80px
+  private activeBombs = new Map<number, { sprite: Phaser.GameObjects.Sprite; tickTimer: Phaser.Time.TimerEvent; x: number; y: number }>();
   private validPickupTiles: { wx: number; wy: number }[] = [];
   private pickupRng: (() => number) | null = null;
   private activeTags = new Map<number, Phaser.GameObjects.Image>();
@@ -105,6 +111,8 @@ export class GameScene extends Phaser.Scene {
     this.load.spritesheet('fireball', '/fireball-sheet.png', { frameWidth: 64, frameHeight: 32 });
     this.load.image('fireball-pickup', '/fireball-pickup.png');
     this.load.image('health-pickup', '/health-pickup.png');
+    this.load.image('bomb-pickup', '/bomb-pickup.png');
+    this.load.spritesheet('bomb', '/bomb-sheet.png', { frameWidth: 32, frameHeight: 32 });
 
     this.load.audio('sfx_attack',    '/audio/attack.mp3');
     this.load.audio('sfx_dash',      '/audio/dash.mp3');
@@ -136,6 +144,20 @@ export class GameScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('fireball', { start: 0, end: 4 }),
       frameRate: 12,
       repeat: -1,
+    });
+
+    // Bomb: frames 0-1 = tick (alternating while fuse burns), frames 2-8 = explosion burst (plays once)
+    this.anims.create({
+      key: 'bomb_tick',
+      frames: this.anims.generateFrameNumbers('bomb', { start: 0, end: 1 }),
+      frameRate: 4,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: 'bomb_explode',
+      frames: this.anims.generateFrameNumbers('bomb', { start: 2, end: 8 }),
+      frameRate: 15,
+      repeat: 0,
     });
 
 
@@ -483,7 +505,9 @@ export class GameScene extends Phaser.Scene {
     });
 
     room.onMessage('pickupCollected', (data: { type: string; idx: number; collectorId: string }) => {
-      const items = data.type === 'fireball' ? this.pickupItems : this.healthPickups;
+      const items = data.type === 'fireball' ? this.pickupItems
+                  : data.type === 'bomb'     ? this.bombPickups
+                  : this.healthPickups;
       const item = items[data.idx];
       if (!item) return;
       item.active = false;
@@ -494,6 +518,10 @@ export class GameScene extends Phaser.Scene {
         if (data.type === 'fireball') {
           this.fireballCount = Math.min(this.fireballCount + 1, this.MAX_FIREBALLS);
           this.events.emit('inventoryChanged', this.fireballCount);
+          this.sound.play('sfx_pickup_fireball', { volume: 0.4 });
+        } else if (data.type === 'bomb') {
+          this.bombCount = Math.min(this.bombCount + 1, this.MAX_BOMBS);
+          this.events.emit('bombCountChanged', this.bombCount);
           this.sound.play('sfx_pickup_fireball', { volume: 0.4 });
         } else {
           this.player.hp = Math.min(this.player.hp + 20, this.player.maxHp);
@@ -510,7 +538,9 @@ export class GameScene extends Phaser.Scene {
     });
 
     room.onMessage('pickupRespawned', (data: { type: string; idx: number; wx: number; wy: number }) => {
-      const items = data.type === 'fireball' ? this.pickupItems : this.healthPickups;
+      const items = data.type === 'fireball' ? this.pickupItems
+                  : data.type === 'bomb'     ? this.bombPickups
+                  : this.healthPickups;
       const item = items[data.idx];
       if (!item) return;
       // Kill any lingering tweens on this sprite so the new bounce starts cleanly
@@ -527,6 +557,53 @@ export class GameScene extends Phaser.Scene {
         ease: 'Sine.easeInOut',
         yoyo: true,
         repeat: -1,
+      });
+    });
+
+    room.onMessage('bombPlaced', (data: { bombId: number; x: number; y: number; ownerId: string }) => {
+      const sprite = this.add.sprite(data.x, data.y, 'bomb', 0);
+      sprite.setDisplaySize(48, 48).setDepth(11);
+      sprite.play('bomb_tick');
+      // Subtle scale pulse for tension
+      const tickTimer = this.tweens.add({
+        targets: sprite,
+        scale: { from: sprite.scaleX, to: sprite.scaleX * 1.1 },
+        duration: 250,
+        ease: 'Sine.easeInOut',
+        yoyo: true,
+        repeat: -1,
+      });
+      // Store as a lightweight TimerEvent-shaped object (we reuse Phaser tween for pulse instead)
+      this.activeBombs.set(data.bombId, {
+        sprite,
+        tickTimer: { remove: () => tickTimer.stop() } as unknown as Phaser.Time.TimerEvent,
+        x: data.x,
+        y: data.y,
+      });
+    });
+
+    room.onMessage('bombExploded', (data: {
+      bombId: number; x: number; y: number;
+      victims: { id: string; name: string; damage: number; dead: boolean; x: number; y: number }[];
+    }) => {
+      const entry = this.activeBombs.get(data.bombId);
+      if (entry) {
+        entry.tickTimer.remove();
+        entry.sprite.setScale(1);
+      }
+      // Play the explosion burst. Reuse the existing sprite if still alive, else create one.
+      const burst = entry?.sprite ?? this.add.sprite(data.x, data.y, 'bomb', 2);
+      burst.setDepth(12).setDisplaySize(this.BOMB_RADIUS_PX * 2, this.BOMB_RADIUS_PX * 2);
+      burst.play('bomb_explode');
+      burst.once('animationcomplete', () => burst.destroy());
+      this.activeBombs.delete(data.bombId);
+
+      // Play a hit sound reusing the fireball hit variants
+      const sfx = ['sfx_fireball_hit1', 'sfx_fireball_hit2', 'sfx_fireball_hit3'][Math.floor(Math.random() * 3)];
+      this.sound.play(sfx, { volume: 0.6 });
+
+      data.victims.forEach(v => {
+        this.showFloatingDamage(v.x, v.y, v.damage, '#ff6b6b');
       });
     });
 
@@ -600,6 +677,12 @@ export class GameScene extends Phaser.Scene {
     this.pickupItems = [];
     this.healthPickups.forEach(p => { p.tween?.stop(); p.sprite.destroy(); });
     this.healthPickups = [];
+    this.bombPickups.forEach(p => { p.tween?.stop(); p.sprite.destroy(); });
+    this.bombPickups = [];
+    this.activeBombs.forEach(b => { b.tickTimer.remove(); b.sprite.destroy(); });
+    this.activeBombs.clear();
+    this.bombCount = 0;
+    this.events.emit('bombCountChanged', 0);
     this.fireballCount = 0;
     this.events.emit('inventoryChanged', 0);
     this.activeTags.forEach(sprite => sprite.destroy());
@@ -775,7 +858,11 @@ export class GameScene extends Phaser.Scene {
         this.player.tryAttack(time, this.remotePlayers, sendAttack, sendSwing);
       }
       if (this.gamePhase === 'playing' && Phaser.Input.Keyboard.JustDown(this.pKey)) {
-        this.tryFireProjectile();
+        if (this.bombCount > 0) {
+          this.tryDropBomb();
+        } else {
+          this.tryFireProjectile();
+        }
       }
 
 
@@ -865,12 +952,18 @@ export class GameScene extends Phaser.Scene {
     this.pickupItems = [];
     this.healthPickups.forEach(p => { p.tween?.stop(); p.sprite.destroy(); });
     this.healthPickups = [];
+    this.bombPickups.forEach(p => { p.tween?.stop(); p.sprite.destroy(); });
+    this.bombPickups = [];
 
-    for (let i = 0; i < 10; i++) {
+    const density = Number((this.room?.state as any)?.density) || 1;
+    for (let i = 0; i < 10 * density; i++) {
       this.spawnPickupAt(this.randomWalkableTile());
     }
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 6 * density; i++) {
       this.spawnHealthPickupAt(this.randomWalkableTile());
+    }
+    for (let i = 0; i < 5 * density; i++) {
+      this.spawnBombPickupAt(this.randomWalkableTile());
     }
   }
 
@@ -892,6 +985,14 @@ export class GameScene extends Phaser.Scene {
         }
         if (!tooClose) {
           for (const p of this.healthPickups) {
+            if (!p.active) continue;
+            const dx = p.worldX - candidate.wx;
+            const dy = p.worldY - candidate.wy;
+            if (dx * dx + dy * dy < MIN_DIST_SQ) { tooClose = true; break; }
+          }
+        }
+        if (!tooClose) {
+          for (const p of this.bombPickups) {
             if (!p.active) continue;
             const dx = p.worldX - candidate.wx;
             const dy = p.worldY - candidate.wy;
@@ -972,6 +1073,23 @@ export class GameScene extends Phaser.Scene {
     this.healthPickups.push({ sprite, active: true, worldX: pos.wx, worldY: pos.wy, tween });
   }
 
+  private spawnBombPickupAt(pos: { wx: number; wy: number }): void {
+    const sprite = this.add.image(pos.wx, pos.wy, 'bomb-pickup');
+    sprite.setDisplaySize(32, 32).setDepth(8);
+
+    const tween = this.tweens.add({
+      targets: sprite,
+      y: pos.wy - 5,
+      duration: 900,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
+      delay: Math.random() * 900,
+    });
+
+    this.bombPickups.push({ sprite, active: true, worldX: pos.wx, worldY: pos.wy, tween });
+  }
+
   private tryFireProjectile(): void {
     if (this.fireballCount <= 0) return;
     this.fireballCount--;
@@ -994,6 +1112,14 @@ export class GameScene extends Phaser.Scene {
       sprite, dirX: nx, dirY: ny,
       traveled: 0, flickering: false, flickerTimer: 0,
     });
+  }
+
+  private tryDropBomb(): void {
+    if (this.bombCount <= 0) return;
+    this.bombCount--;
+    this.events.emit('bombCountChanged', this.bombCount);
+    // Drop at the player's feet — server is authoritative for the fuse + damage
+    sendBombDropped(this.player.x, this.player.y);
   }
 
   private updateProjectiles(delta: number): void {
@@ -1081,6 +1207,21 @@ export class GameScene extends Phaser.Scene {
         item.active = false;
         sendPickupCollect('health', i);
         break;
+      }
+    }
+
+    if (this.bombCount < this.MAX_BOMBS) {
+      for (let i = 0; i < this.bombPickups.length; i++) {
+        const item = this.bombPickups[i];
+        if (!item.active) continue;
+        const dist = Phaser.Math.Distance.Between(
+          this.player.x, this.player.y, item.worldX, item.worldY,
+        );
+        if (dist < 18) {
+          item.active = false;
+          sendPickupCollect('bomb', i);
+          break;
+        }
       }
     }
   }

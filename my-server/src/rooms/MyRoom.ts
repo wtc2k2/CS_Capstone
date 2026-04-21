@@ -64,6 +64,9 @@ const HIT_COOLDOWN = 200; // how often a player can be hit
 const RESPAWN_DELAY = 5000;
 const FIREBALL_DAMAGE = 40;
 const FIREBALL_RANGE  = 600; // generous buffer for network latency — client validates visual hit
+const BOMB_DAMAGE = 50;
+const BOMB_RADIUS = 5 * TILE_SIZE; // 5-tile AoE radius = 80px
+const BOMB_FUSE_MS = 2000;
 
 const TAG_EXPIRE_TIME = 15000;  // 15 seconds
 const KC_SCORE_LIMIT = 20;
@@ -72,6 +75,10 @@ const TAG_COLLECT_RANGE = 64;
 const PLAYER_COLORS = [0x3498db, 0xe74c3c, 0x2ecc71, 0xf39c12];
 
 const VALID_MAX_PLAYERS = [5, 10, 20, 30];
+const VALID_DURATIONS = [120, 180, 300]; // seconds
+const DEFAULT_DURATION = 300;
+const VALID_DENSITIES = [1, 2, 4]; // few, normal, many
+const DEFAULT_DENSITY = 1;
 const WAITING_TILE_SIZE = 16;
 
 function waitingSpawn(): { x: number; y: number } {
@@ -96,6 +103,7 @@ export class MyRoom extends Room {
   private gameMode = 'ffa';
   private tagCounter = 0;
   private activeTags = new Map<number, { id: number; x: number; y: number; killerId: string; victimId: string; timer: any }>();
+  private bombCounter = 0;
 
   private scheduleEmptyDispose(): void {
     if (this.emptyRoomTimer) { this.emptyRoomTimer.clear(); this.emptyRoomTimer = undefined; }
@@ -125,6 +133,8 @@ export class MyRoom extends Room {
       phase: this.state.phase,
       playerCount: this.state.players.size,
       timeRemaining: this.state.timeRemaining,
+      gameDuration: this.state.gameDuration,
+      density: this.state.density,
     });
   }
 
@@ -297,7 +307,7 @@ export class MyRoom extends Room {
       if (this.state.phase !== 'playing') return;
       const type = String(message.type);
       const idx  = Number(message.idx);
-      if (type !== 'fireball' && type !== 'health') return;
+      if (type !== 'fireball' && type !== 'health' && type !== 'bomb') return;
       // Broadcast collection to all clients (including sender)
       this.broadcast('pickupCollected', { type, idx, collectorId: client.sessionId });
       // After respawn delay, ask the host to provide a new position
@@ -316,8 +326,79 @@ export class MyRoom extends Room {
       const idx  = Number(message.idx);
       const wx   = Number(message.wx);
       const wy   = Number(message.wy);
-      if (type !== 'fireball' && type !== 'health') return;
+      if (type !== 'fireball' && type !== 'health' && type !== 'bomb') return;
       this.broadcast('pickupRespawned', { type, idx, wx, wy });
+    },
+
+    bombDropped: (client: Client, message: { x: number; y: number }) => {
+      if (this.state.phase !== 'playing') return;
+      const owner = this.state.players.get(client.sessionId);
+      if (!owner || !owner.alive) return;
+      const x = Number(message.x);
+      const y = Number(message.y);
+      if (isNaN(x) || isNaN(y)) return;
+
+      const bombId = ++this.bombCounter;
+      const ownerId = client.sessionId;
+      // Broadcast placement so every client spawns a ticking bomb visual
+      this.broadcast('bombPlaced', { bombId, x, y, ownerId });
+
+      // Detonate after fuse
+      this.clock.setTimeout(() => {
+        if (this.state.phase !== 'playing') return;
+        const victims: { id: string; name: string; damage: number; dead: boolean; x: number; y: number }[] = [];
+        this.state.players.forEach((p, id) => {
+          if (!p.alive) return;
+          const dx = p.x - x;
+          const dy = p.y - y;
+          if (Math.sqrt(dx * dx + dy * dy) > BOMB_RADIUS) return;
+
+          p.hp -= BOMB_DAMAGE;
+          let dead = false;
+          if (p.hp <= 0) {
+            p.hp = 0;
+            p.alive = false;
+            p.deaths += 1;
+            dead = true;
+            if (id !== ownerId) {
+              const killer = this.state.players.get(ownerId);
+              if (killer && killer.alive) {
+                killer.kills += 1;
+                killer.hp = killer.maxHp;
+              }
+            }
+          }
+          victims.push({ id, name: p.name, damage: BOMB_DAMAGE, dead, x: p.x, y: p.y });
+        });
+
+        this.broadcast('bombExploded', { bombId, x, y, victims });
+
+        // Emit kill/tag events + respawn timers for anyone who died
+        victims.forEach(v => {
+          if (!v.dead) return;
+          const victim = this.state.players.get(v.id);
+          if (!victim) return;
+          const killerId = v.id === ownerId ? '' : ownerId;
+          const killer = killerId ? this.state.players.get(killerId) : undefined;
+          this.broadcast('killed', {
+            victimId: v.id,
+            killerId,
+            victimName: v.name,
+            killerName: killer?.name ?? '',
+            weapon: 'bomb',
+          });
+          if (this.gameMode === 'killConfirmed' && killerId) {
+            this.dropTag(victim.x, victim.y, killerId, v.id);
+          }
+          this.clock.setTimeout(() => {
+            const spawn = gameSpawnPoint();
+            victim.x = spawn.x;
+            victim.y = spawn.y;
+            victim.hp = victim.maxHp;
+            victim.alive = true;
+          }, RESPAWN_DELAY);
+        });
+      }, BOMB_FUSE_MS);
     },
 
     collectTag: (client: Client, message: { tagId: number }) => {
@@ -363,8 +444,8 @@ export class MyRoom extends Room {
       this.state.pickupSeed = (Math.random() * 0xFFFFFF | 0) + 1;
       this.state.phase = "playing";
       this.lock(); // block new joins
-      const GAME_DURATION = 304000; // 5 min + ~4s countdown buffer
-      const GAME_DURATION_SECS = 300;
+      const GAME_DURATION_SECS = this.state.gameDuration;
+      const GAME_DURATION = GAME_DURATION_SECS * 1000 + 4000; // +4s countdown buffer
       this.state.gameEndTime = Date.now() + GAME_DURATION;
       this.state.timeRemaining = GAME_DURATION_SECS;
       this.autoEndTimer = this.clock.setTimeout(() => this.triggerEndGame(true), GAME_DURATION);
@@ -491,6 +572,12 @@ export class MyRoom extends Room {
     const validated = VALID_MAX_PLAYERS.includes(requestedMax) ? requestedMax : 10;
     this.maxClients = validated;
     this.state.maxPlayers = validated;
+
+    const requestedDuration = Number(options?.duration);
+    this.state.gameDuration = VALID_DURATIONS.includes(requestedDuration) ? requestedDuration : DEFAULT_DURATION;
+
+    const requestedDensity = Number(options?.density);
+    this.state.density = VALID_DENSITIES.includes(requestedDensity) ? requestedDensity : DEFAULT_DENSITY;
 
     // Game mode
     this.gameMode = options?.gameMode === 'killConfirmed' ? 'killConfirmed' : 'ffa';

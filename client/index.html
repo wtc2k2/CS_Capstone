@@ -11,6 +11,47 @@
 </head>
 <body>
 
+  <!-- ── LANDING SCREEN ── -->
+  <div id="landing-screen" class="hidden">
+    <div class="landing-asphalt"></div>
+    <h1 class="landing-title">CAMPUS<br>CLASH</h1>
+    <div class="landing-sprites">
+      <div class="landing-sprite landing-sprite-left">
+        <img src="/characters/scout_idle_right.png" alt="Scout" />
+      </div>
+      <div class="landing-sprite landing-sprite-right">
+        <img src="/characters/lancer_idle_left.png" alt="Lancer" />
+      </div>
+    </div>
+    <button id="landing-get-started" class="landing-get-started">GET STARTED</button>
+    <button id="landing-skip" class="landing-skip">ALREADY PLAYED? SKIP &rsaquo;</button>
+  </div>
+
+  <!-- ── ONBOARDING SCREEN ── -->
+  <div id="onboarding-screen" class="hidden">
+    <div class="onboarding-card">
+      <div class="onboarding-header">
+        <span class="onboarding-step-badge" id="onboarding-step-badge">STEP 1 OF 5</span>
+        <h2 class="onboarding-title" id="onboarding-title">SIGN UP OR SIGN IN</h2>
+      </div>
+      <div class="onboarding-image-frame">
+        <img class="onboarding-image" id="onboarding-image" src="/getting-started/step1.png" alt="step" />
+      </div>
+      <p class="onboarding-caption" id="onboarding-caption">CREATE AN ACCOUNT OR SIGN IN TO GET STARTED.</p>
+      <div class="onboarding-dots" id="onboarding-dots">
+        <span class="onboarding-dot active"></span>
+        <span class="onboarding-dot"></span>
+        <span class="onboarding-dot"></span>
+        <span class="onboarding-dot"></span>
+        <span class="onboarding-dot"></span>
+      </div>
+      <div class="onboarding-nav">
+        <button class="onboarding-back" id="onboarding-back">&lsaquo; BACK</button>
+        <button class="onboarding-next" id="onboarding-next">NEXT &rsaquo;</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── CLERK AUTH SCREEN ── -->
   <div id="clerk-auth-screen" class="hidden">
     <div class="clerk-auth-bg">
@@ -87,6 +128,18 @@
               <button class="player-count-btn active" id="mp-10">10</button>
               <button class="player-count-btn" id="mp-20">20</button>
               <button class="player-count-btn" id="mp-30">30</button>
+            </div>
+            <span class="max-players-label">TIME:</span>
+            <div class="player-count-selector">
+              <button class="player-count-btn" id="dur-120">2 MIN</button>
+              <button class="player-count-btn" id="dur-180">3 MIN</button>
+              <button class="player-count-btn active" id="dur-300">5 MIN</button>
+            </div>
+            <span class="max-players-label">ITEMS:</span>
+            <div class="player-count-selector">
+              <button class="player-count-btn" id="dens-1">FEW</button>
+              <button class="player-count-btn active" id="dens-2">NORMAL</button>
+              <button class="player-count-btn" id="dens-4">MANY</button>
             </div>
           </div>
 
