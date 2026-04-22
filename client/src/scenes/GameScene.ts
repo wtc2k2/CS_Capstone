@@ -130,6 +130,9 @@ export class GameScene extends Phaser.Scene {
     this.load.audio('sfx_fireball_hit3', '/audio/fireball_hit3.wav');
     this.load.audio('sfx_pickup_fireball', '/audio/pickup_fireball.wav');
     this.load.audio('sfx_pickup_health',   '/audio/pickup_health.wav');
+    this.load.audio('sfx_bomb_explosion',  '/audio/bomb_explosion.ogg');
+    this.load.audio('sfx_bomb_napalm1',    '/audio/bomb_napalm1.ogg');
+    this.load.audio('sfx_bomb_napalm2',    '/audio/bomb_napalm2.ogg');
   }
 
   init(data?: { classData?: ClassData }): void {
@@ -599,8 +602,7 @@ export class GameScene extends Phaser.Scene {
       burst.once('animationcomplete', () => burst.destroy());
       this.activeBombs.delete(data.bombId);
 
-      // Play a hit sound reusing the fireball hit variants
-      const sfx = ['sfx_fireball_hit1', 'sfx_fireball_hit2', 'sfx_fireball_hit3'][Math.floor(Math.random() * 3)];
+      const sfx = ['sfx_bomb_explosion', 'sfx_bomb_napalm1', 'sfx_bomb_napalm2'][Math.floor(Math.random() * 3)];
       this.sound.play(sfx, { volume: 0.6 });
 
       data.victims.forEach(v => {
