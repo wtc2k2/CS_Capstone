@@ -68,6 +68,8 @@ const BOMB_DAMAGE = 50;
 const BOMB_RADIUS = 5 * TILE_SIZE; // 5-tile AoE radius = 80px
 const BOMB_FUSE_MS = 2000;
 
+const HEALTH_PACK_HEAL = 20;
+
 const TAG_EXPIRE_TIME = 15000;  // 15 seconds
 const KC_SCORE_LIMIT = 20;
 const TAG_COLLECT_RANGE = 64;
@@ -308,6 +310,10 @@ export class MyRoom extends Room {
       const type = String(message.type);
       const idx  = Number(message.idx);
       if (type !== 'fireball' && type !== 'health' && type !== 'bomb') return;
+      if (type === 'health') {
+        const player = this.state.players.get(client.sessionId);
+        if (player) player.hp = Math.min(player.hp + HEALTH_PACK_HEAL, player.maxHp);
+      }
       // Broadcast collection to all clients (including sender)
       this.broadcast('pickupCollected', { type, idx, collectorId: client.sessionId });
       // After respawn delay, ask the host to provide a new position

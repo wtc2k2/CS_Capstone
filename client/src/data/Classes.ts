@@ -7,6 +7,7 @@ export interface ClassData {
   attackRange: number;
   attackRate: number;
   fireballRange: number; // in tiles
+  fireballRate: number;  // ms between fireball throws
   stars: { speed: number; health: number; damage: number };
   weaponName: string;
   spriteKey: string;
@@ -23,7 +24,7 @@ export const CHARACTERS: ClassData[] = [
     name: 'Adventurer',
     color: 0x4a9eff,
     maxHp: 100, speed: 160, attackDamage: 22, attackRange: 64, attackRate: 450,
-    fireballRange: 25,
+    fireballRange: 25, fireballRate: 500,
     stars: { speed: 4, health: 4, damage: 4 },
     weaponName: 'Daggers',
     spriteKey: 'adventurer',
@@ -35,8 +36,7 @@ export const CHARACTERS: ClassData[] = [
     name: 'Scout',
     color: 0xff6b6b,
     maxHp: 75, speed: 170, attackDamage: 15, attackRange: 90, attackRate: 500,
-
-    fireballRange: 15,
+    fireballRange: 15, fireballRate: 350,
     stars: { speed: 5, health: 3, damage: 3 },
     weaponName: 'Spear',
     spriteKey: 'scout',
@@ -48,7 +48,7 @@ export const CHARACTERS: ClassData[] = [
     name: 'Lancer',
     color: 0xe8a230,
     maxHp: 125, speed: 150, attackDamage: 30, attackRange: 90, attackRate: 600,
-    fireballRange: 35,
+    fireballRange: 35, fireballRate: 750,
     stars: { speed: 3, health: 5, damage: 5 },
     weaponName: 'Spear',
     spriteKey: 'lancer',

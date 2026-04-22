@@ -65,6 +65,8 @@ export class GameScene extends Phaser.Scene {
   private readonly FIREBALL_SPEED = 495;
   private FIREBALL_RANGE_PX = 240;
   private FIREBALL_FLICKER_PX = 208;
+  private lastFireballTime = 0;
+  private FIREBALL_COOLDOWN = 500;
   private activeProjectiles: ActiveProjectile[] = [];
   private remoteProjectiles: ActiveProjectile[] = [];
   private pickupItems: PickupItem[] = [];
@@ -134,6 +136,7 @@ export class GameScene extends Phaser.Scene {
     this.classData = data?.classData ?? this.registry.get('classData') ?? DEFAULT_CLASS;
     this.FIREBALL_RANGE_PX = this.classData.fireballRange * 16; // tiles → px
     this.FIREBALL_FLICKER_PX = this.FIREBALL_RANGE_PX - 32;
+    this.FIREBALL_COOLDOWN = this.classData.fireballRate;
   }
 
   create(): void {
@@ -524,8 +527,6 @@ export class GameScene extends Phaser.Scene {
           this.events.emit('bombCountChanged', this.bombCount);
           this.sound.play('sfx_pickup_fireball', { volume: 0.4 });
         } else {
-          this.player.hp = Math.min(this.player.hp + 20, this.player.maxHp);
-          this.events.emit('playerHpChanged', this.player.hp, this.player.maxHp);
           this.sound.play('sfx_pickup_health', { volume: 0.4 });
         }
       }
@@ -1109,6 +1110,9 @@ export class GameScene extends Phaser.Scene {
 
   private tryFireProjectile(): void {
     if (this.fireballCount <= 0) return;
+    const now = this.time.now;
+    if (now - this.lastFireballTime < this.FIREBALL_COOLDOWN) return;
+    this.lastFireballTime = now;
     this.fireballCount--;
     this.events.emit('inventoryChanged', this.fireballCount);
 
