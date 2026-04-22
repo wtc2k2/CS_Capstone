@@ -103,6 +103,7 @@ export class MyRoom extends Room {
   // Maps sessionId → clerkId (not synced to clients, server-only)
   private playerClerkIds = new Map<string, string>();
   private gameMode = 'ffa';
+  private roomIsPrivate = false;
   private tagCounter = 0;
   private activeTags = new Map<number, { id: number; x: number; y: number; killerId: string; victimId: string; timer: any }>();
   private bombCounter = 0;
@@ -131,7 +132,7 @@ export class MyRoom extends Room {
       gameMode: this.gameMode,
       roomCode: this.state.roomCode,
       maxPlayers: this.state.maxPlayers,
-      isPrivate: false,
+      isPrivate: this.roomIsPrivate,
       phase: this.state.phase,
       playerCount: this.state.players.size,
       timeRemaining: this.state.timeRemaining,
@@ -598,6 +599,7 @@ export class MyRoom extends Room {
   async onCreate (options: any) {
     this.roomId = makeRoomCode();       // sets the actual room ID used by joinById
     this.state.roomCode = this.roomId;  // synced to clients for display
+    this.roomIsPrivate = options?.isPrivate === true;
     const requestedMax = Number(options?.maxPlayers);
     const validated = VALID_MAX_PLAYERS.includes(requestedMax) ? requestedMax : 10;
     this.maxClients = validated;
