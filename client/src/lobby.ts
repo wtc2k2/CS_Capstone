@@ -93,27 +93,32 @@ interface OnboardingStep {
 const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     title: 'SIGN UP OR SIGN IN',
-    image: '/getting-started/step1.png',
+    image: '/getting-started/demo-login.png',
     caption: 'Create an account or sign in to get started.',
   },
   {
     title: 'CREATE A USERNAME',
-    image: '/getting-started/step2.png',
+    image: '/getting-started/demo-username.png',
     caption: 'Pick a name your friends will see in the arena.',
   },
   {
-    title: 'HOST OR JOIN A GAME',
-    image: '/getting-started/step3.png',
-    caption: 'Start a new match, or join one with a code.',
+    title: 'SELECT YOUR CHARACTER',
+    image: '/getting-started/demo-character.png',
+    caption: 'Choose your fighter before entering the lobby — each has unique strengths!',
   },
   {
-    title: 'SELECT YOUR CHARACTER',
-    image: '/getting-started/step4.png',
-    caption: "Don't forget to pick your fighter from the LOCKER tab.",
+    title: 'HOST OR JOIN A GAME',
+    image: '/getting-started/demo-lobby.png',
+    caption: 'Start a new match, or join one with a code or from the room browser.',
+  },
+  {
+    title: 'HOW TO PLAY',
+    image: '/getting-started/step_controls.png',
+    caption: 'WASD: move  ·  O: attack  ·  SPACE: dash (3 charges)  ·  P: throw fireball / bomb',
   },
   {
     title: 'JUMP IN AND HAVE FUN',
-    image: '/getting-started/step5.png',
+    image: '/getting-started/demo-game.png',
     caption: 'Wait for the host to start the match. Good luck!',
   },
 ];
@@ -148,27 +153,109 @@ function showLanding(): Promise<void> {
 function showOnboarding(): Promise<void> {
   return new Promise<void>((resolve) => {
     const screen = document.getElementById('onboarding-screen')!;
+    const card = screen.querySelector('.onboarding-card') as HTMLElement;
     const badge = document.getElementById('onboarding-step-badge')!;
     const title = document.getElementById('onboarding-title')!;
     const img = document.getElementById('onboarding-image') as HTMLImageElement;
     const caption = document.getElementById('onboarding-caption')!;
+    const imageFrame = document.getElementById('onboarding-image-frame')!;
+    const controlsPanel = document.getElementById('onboarding-controls')!;
     const back = document.getElementById('onboarding-back') as HTMLButtonElement;
     const next = document.getElementById('onboarding-next') as HTMLButtonElement;
     const dots = Array.from(document.querySelectorAll('#onboarding-dots .onboarding-dot')) as HTMLElement[];
+
+    const CONTROLS_STEP_IDX = ONBOARDING_STEPS.findIndex(s => s.title === 'HOW TO PLAY');
+    let ctrlIntervals: number[] = [];
+
+    function animateSheet(canvas: HTMLCanvasElement | null, src: string, fw: number, fh: number, totalFrames: number, ms: number): void {
+      if (!canvas) return;
+      const image = new Image();
+      image.onload = () => {
+        const ctx = canvas.getContext('2d')!;
+        ctx.imageSmoothingEnabled = false;
+        const scale = Math.min((canvas.width * 0.85) / fw, (canvas.height * 0.85) / fh);
+        const dw = fw * scale;
+        const dh = fh * scale;
+        const dx = (canvas.width - dw) / 2;
+        const dy = (canvas.height - dh) / 2;
+        let frame = 0;
+        const draw = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(image, frame * fw, 0, fw, fh, dx, dy, dw, dh);
+          frame = (frame + 1) % totalFrames;
+        };
+        draw();
+        ctrlIntervals.push(window.setInterval(draw, ms));
+      };
+      image.src = src;
+    }
+
+    function animatePulse(canvas: HTMLCanvasElement | null, src: string, pixelated = false): void {
+      if (!canvas) return;
+      const image = new Image();
+      image.onload = () => {
+        const ctx = canvas.getContext('2d')!;
+        ctx.imageSmoothingEnabled = !pixelated;
+        let t = 0;
+        const draw = () => {
+          const scale = 0.70 + 0.06 * Math.sin(t);
+          const s = Math.min(canvas.width, canvas.height) * scale;
+          const dx = (canvas.width - s) / 2;
+          const dy = (canvas.height - s) / 2;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(image, dx, dy, s, s);
+          t += 0.04;
+        };
+        draw();
+        ctrlIntervals.push(window.setInterval(draw, 50));
+      };
+      image.src = src;
+    }
+
+    function startControlsAnimations(): void {
+      ctrlIntervals.forEach(clearInterval);
+      ctrlIntervals = [];
+      // Fireball: native <img> GIF loops automatically — no canvas needed
+      // Bomb sheet: 9 frames (sits still × 4, then explodes × 5). Slow enough to read each phase.
+      animateSheet(document.getElementById('ctrl-bomb-canvas') as HTMLCanvasElement, '/bomb-sheet.png', 32, 32, 9, 200);
+      // Health pack: pulsing single image
+      animatePulse(document.getElementById('ctrl-health-canvas') as HTMLCanvasElement, '/health-pickup.png');
+      // Character attack animations — slowed down so each frame reads clearly
+      animateSheet(document.getElementById('ctrl-adv-canvas') as HTMLCanvasElement, '/characters/adventurer_attack_right.png', 96, 80, 8, 160);
+      animateSheet(document.getElementById('ctrl-scout-canvas') as HTMLCanvasElement, '/characters/scout_attack_right.png', 48, 64, 8, 160);
+      animateSheet(document.getElementById('ctrl-lancer-canvas') as HTMLCanvasElement, '/characters/lancer_attack_right.png', 48, 64, 8, 160);
+    }
+
+    function stopControlsAnimations(): void {
+      ctrlIntervals.forEach(clearInterval);
+      ctrlIntervals = [];
+    }
 
     let idx = 0;
     const render = () => {
       const step = ONBOARDING_STEPS[idx];
       badge.textContent = `STEP ${idx + 1} OF ${ONBOARDING_STEPS.length}`;
       title.textContent = step.title;
-      img.src = step.image;
-      img.alt = step.title;
       caption.textContent = step.caption;
       dots.forEach((d, i) => d.classList.toggle('active', i === idx));
       back.disabled = idx === 0;
       const isLast = idx === ONBOARDING_STEPS.length - 1;
       next.textContent = isLast ? "LET'S PLAY" : 'NEXT ›';
       next.classList.toggle('final', isLast);
+
+      const isControls = idx === CONTROLS_STEP_IDX;
+      imageFrame.style.display = isControls ? 'none' : '';
+      caption.style.display = isControls ? 'none' : '';
+      controlsPanel.classList.toggle('hidden', !isControls);
+      card.classList.toggle('controls-mode', isControls);
+
+      if (isControls) {
+        startControlsAnimations();
+      } else {
+        img.src = step.image;
+        img.alt = step.title;
+        stopControlsAnimations();
+      }
     };
 
     const onBack = () => {
@@ -187,6 +274,10 @@ function showOnboarding(): Promise<void> {
       }
     };
     const cleanup = () => {
+      stopControlsAnimations();
+      card.classList.remove('controls-mode');
+      imageFrame.style.display = '';
+      caption.style.display = '';
       screen.classList.add('hidden');
       back.removeEventListener('click', onBack);
       next.removeEventListener('click', onNext);
@@ -263,7 +354,7 @@ function showLogin(resolve: (r: LobbyResult) => void, clerkId: string, email: st
   const input = document.getElementById('username-input') as HTMLInputElement;
   const btn = document.getElementById('login-btn')!;
 
-  const submit = () => {
+  const submit = async () => {
     const name = input.value.trim().slice(0, 16);
     if (!name) {
       input.classList.add('shake');
@@ -273,6 +364,7 @@ function showLogin(resolve: (r: LobbyResult) => void, clerkId: string, email: st
     localStorage.setItem(USERNAME_KEY, name);
     void saveUserToSupabase(clerkId, name, email);
     screen.classList.add('hidden');
+    await showCharacterSelect();
     const lobbyScreen = document.getElementById('lobby-screen')!;
     lobbyScreen.classList.add('fade-in');
     showLobby(name, resolve, clerkId, email, avatarUrl, displayName);
@@ -394,6 +486,126 @@ function buildLockerGrid(
   }
 
   container.appendChild(grid);
+}
+
+const CHAR_PROS_CONS: Record<string, { pros: string[]; cons: string[] }> = {
+  adventurer: {
+    pros: ['Balanced stats', 'Reliable damage output'],
+    cons: ['No standout strengths', 'Mediocre speed'],
+  },
+  scout: {
+    pros: ['Fastest movement speed', 'Long spear reach'],
+    cons: ['Lowest HP pool', 'Fragile in sustained fights'],
+  },
+  lancer: {
+    pros: ['High HP pool', 'Powerful heavy strikes'],
+    cons: ['Slowest movement speed', 'Limited fireball range'],
+  },
+};
+
+function showCharacterSelect(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const screen = document.getElementById('character-select-screen')!;
+    const grid = document.getElementById('char-select-grid')!;
+    const confirmBtn = document.getElementById('char-select-confirm') as HTMLButtonElement;
+
+    const savedKey = localStorage.getItem(CHARACTER_KEY) ?? CHARACTERS[0].spriteKey;
+    let selected: ClassData = CHARACTERS.find(c => c.spriteKey === savedKey) ?? CHARACTERS[0];
+
+    const updateConfirmBtn = () => {
+      confirmBtn.textContent = `PLAY AS ${selected.name.toUpperCase()}`;
+    };
+
+    // Build character panels
+    grid.querySelectorAll('canvas').forEach(c => {
+      const id = (c as any)._animInterval;
+      if (id) clearInterval(id);
+    });
+    grid.innerHTML = '';
+
+    for (const char of CHARACTERS) {
+      const panel = document.createElement('div');
+      panel.className = 'char-select-panel';
+      if (char.spriteKey === selected.spriteKey) panel.classList.add('selected');
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 240;
+      canvas.height = 220;
+
+      const img = new Image();
+      img.onload = () => {
+        const ctx = canvas.getContext('2d')!;
+        ctx.imageSmoothingEnabled = false;
+        const fw = char.frameWidth;
+        const fh = char.frameHeight;
+        const totalFrames = Math.floor(img.naturalWidth / fw);
+        const aspect = fh / fw;
+        const destW = canvas.width;
+        const destH = Math.min(canvas.height, Math.round(destW * aspect));
+        const destY = Math.round((canvas.height - destH) / 2);
+        let frame = 0;
+        const drawFrame = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, frame * fw, 0, fw, fh, 0, destY, destW, destH);
+          frame = (frame + 1) % totalFrames;
+        };
+        drawFrame();
+        (canvas as any)._animInterval = setInterval(drawFrame, 180);
+      };
+      img.src = `/characters/${char.defaultTexture}.png`;
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'char-select-name';
+      nameEl.textContent = char.name.toUpperCase();
+
+      const weaponEl = document.createElement('div');
+      weaponEl.className = 'char-select-weapon';
+      weaponEl.textContent = char.weaponName.toUpperCase();
+
+      const statsEl = document.createElement('div');
+      statsEl.className = 'char-select-stats';
+      statsEl.appendChild(buildStatRow('HEALTH', char.stars.health, `${char.maxHp}`));
+      statsEl.appendChild(buildStatRow('SPEED', char.stars.speed, `${char.speed}`));
+      statsEl.appendChild(buildStatRow('DAMAGE', char.stars.damage, `${char.attackDamage}`));
+
+      const pc = CHAR_PROS_CONS[char.spriteKey] ?? { pros: [], cons: [] };
+
+      const prosEl = document.createElement('ul');
+      prosEl.className = 'char-select-pros';
+      pc.pros.forEach(p => { const li = document.createElement('li'); li.textContent = p; prosEl.appendChild(li); });
+
+      const consEl = document.createElement('ul');
+      consEl.className = 'char-select-cons';
+      pc.cons.forEach(c => { const li = document.createElement('li'); li.textContent = c; consEl.appendChild(li); });
+
+      panel.append(canvas, nameEl, weaponEl, statsEl, prosEl, consEl);
+
+      panel.addEventListener('click', () => {
+        playMenuClick();
+        grid.querySelectorAll('.char-select-panel').forEach(p => p.classList.remove('selected'));
+        panel.classList.add('selected');
+        selected = char;
+        localStorage.setItem(CHARACTER_KEY, char.spriteKey);
+        updateConfirmBtn();
+      });
+
+      grid.appendChild(panel);
+    }
+
+    updateConfirmBtn();
+    screen.classList.remove('hidden');
+
+    const onConfirm = () => {
+      playMenuClick();
+      grid.querySelectorAll('canvas').forEach(c => {
+        const id = (c as any)._animInterval;
+        if (id) clearInterval(id);
+      });
+      screen.classList.add('hidden');
+      resolve();
+    };
+    confirmBtn.addEventListener('click', onConfirm, { once: true });
+  });
 }
 
 function showLobby(username: string, resolve: (r: LobbyResult) => void, clerkId: string, _email: string, avatarUrl: string, displayName: string): void {
@@ -688,24 +900,50 @@ function showLobby(username: string, resolve: (r: LobbyResult) => void, clerkId:
   const roomBrowser = document.getElementById('room-browser');
   let browserInterval: number | undefined;
 
+  function showPrivateCodePrompt(): Promise<string | null> {
+    return new Promise((res) => {
+      const modal = document.getElementById('private-code-modal')!;
+      const input = document.getElementById('private-code-input') as HTMLInputElement;
+      const confirmBtn = document.getElementById('private-code-confirm')!;
+      const cancelBtn = document.getElementById('private-code-cancel')!;
+      input.value = '';
+      modal.classList.remove('hidden');
+      setTimeout(() => input.focus(), 50);
+      const finish = (val: string | null) => {
+        modal.classList.add('hidden');
+        confirmBtn.removeEventListener('click', onConfirm);
+        cancelBtn.removeEventListener('click', onCancel);
+        input.removeEventListener('keydown', onKey);
+        res(val);
+      };
+      const onConfirm = () => finish(input.value.trim().toUpperCase());
+      const onCancel = () => finish(null);
+      const onKey = (e: KeyboardEvent) => { if (e.key === 'Enter') onConfirm(); if (e.key === 'Escape') onCancel(); };
+      confirmBtn.addEventListener('click', onConfirm);
+      cancelBtn.addEventListener('click', onCancel);
+      input.addEventListener('keydown', onKey);
+    });
+  }
+
   async function refreshRoomBrowser() {
     const container = document.getElementById('room-browser');
     if (!container) return;
     try {
       const { getAvailableRooms } = await import('./network/Network');
       const rooms = await getAvailableRooms();
-      const publicRooms = rooms.filter((r: any) => !r.metadata?.isPrivate);
 
       container.innerHTML = '';
-      if (publicRooms.length === 0) {
+      if (rooms.length === 0) {
         container.innerHTML = '<div class="no-rooms">No open rooms found</div>';
         return;
       }
 
-      for (const rm of publicRooms) {
+      for (const rm of rooms) {
         const meta = rm.metadata || {};
+        const isPrivate = !!meta.isPrivate;
         const modeLabel = meta.gameMode === 'killConfirmed' ? 'KILL CONFIRMED' : 'FREEPLAY';
         const code = meta.roomCode || rm.roomId;
+        const codeDisplay = isPrivate ? '🔒 PRIVATE' : code;
         const players = `${rm.clients}/${rm.maxClients}`;
         const phase = meta.phase || 'waiting';
         const isPlaying = phase === 'playing';
@@ -720,10 +958,10 @@ function showLobby(username: string, resolve: (r: LobbyResult) => void, clerkId:
         }
 
         const card = document.createElement('div');
-        card.className = 'room-card';
+        card.className = `room-card${isPrivate ? ' private' : ''}`;
         card.innerHTML = `
           <span class="room-mode">${modeLabel}</span>
-          <span class="room-code">${code}</span>
+          <span class="room-code">${codeDisplay}</span>
           <span class="room-players">${players}</span>
           ${timeDisplay ? `<span class="room-time">${timeDisplay}</span>` : ''}
           <span class="room-status ${statusClass}">${statusLabel}</span>
@@ -731,6 +969,7 @@ function showLobby(username: string, resolve: (r: LobbyResult) => void, clerkId:
         card.addEventListener('click', () => {
           (window as any).__browserRoomId = rm.roomId;
           (window as any).__browserRoomCode = code;
+          (window as any).__browserRoomIsPrivate = isPrivate;
           container.querySelectorAll('.room-card').forEach(c => c.classList.remove('selected'));
           card.classList.add('selected');
         });
@@ -819,6 +1058,19 @@ function showLobby(username: string, resolve: (r: LobbyResult) => void, clerkId:
 
     // Join via room browser
     if ((window as any).__browserRoomId && browseBtn?.classList.contains('active')) {
+      // Private rooms require code verification before joining
+      if ((window as any).__browserRoomIsPrivate) {
+        const entered = await showPrivateCodePrompt();
+        if (entered === null) { resetBtn(); return; }
+        const actual = ((window as any).__browserRoomCode as string).toUpperCase();
+        if (entered !== actual) {
+          joinStatus.textContent = 'Wrong Code';
+          joinStatus.style.color = '#e63946';
+          setTimeout(() => { joinStatus.textContent = ''; }, 3000);
+          resetBtn();
+          return;
+        }
+      }
       try {
         const { joinRoomById } = await import('./network/Network');
         await joinRoomById(
@@ -830,6 +1082,7 @@ function showLobby(username: string, resolve: (r: LobbyResult) => void, clerkId:
         if (browserInterval) { clearInterval(browserInterval); browserInterval = undefined; }
         (window as any).__browserRoomId = undefined;
         (window as any).__browserRoomCode = undefined;
+        (window as any).__browserRoomIsPrivate = undefined;
         await launchGame();
         resolve({ username, clerkId, mode, isPrivate, roomCode, classData, gameMode });
       } catch (err) {

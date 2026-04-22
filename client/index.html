@@ -34,12 +34,48 @@
         <span class="onboarding-step-badge" id="onboarding-step-badge">STEP 1 OF 5</span>
         <h2 class="onboarding-title" id="onboarding-title">SIGN UP OR SIGN IN</h2>
       </div>
-      <div class="onboarding-image-frame">
+      <div class="onboarding-image-frame" id="onboarding-image-frame">
         <img class="onboarding-image" id="onboarding-image" src="/getting-started/step1.png" alt="step" />
       </div>
       <p class="onboarding-caption" id="onboarding-caption">CREATE AN ACCOUNT OR SIGN IN TO GET STARTED.</p>
+
+      <!-- ── HOW TO PLAY panel (replaces image + caption on that step) ── -->
+      <div id="onboarding-controls" class="hidden">
+        <div class="ctrl-keys-section">
+          <div class="ctrl-key-item"><span class="ctrl-keys">W A S D</span><span class="ctrl-arrow">→</span><span class="ctrl-desc">Move</span></div>
+          <div class="ctrl-key-item"><span class="ctrl-keys">O</span><span class="ctrl-arrow">→</span><span class="ctrl-desc">Melee Attack</span></div>
+          <div class="ctrl-key-item"><span class="ctrl-keys">SPACE</span><span class="ctrl-arrow">→</span><span class="ctrl-desc">Dash · 3 charges</span></div>
+          <div class="ctrl-key-item"><span class="ctrl-keys">P</span><span class="ctrl-arrow">→</span><span class="ctrl-desc">Throw pickup</span></div>
+        </div>
+        <div class="ctrl-char-row">
+          <div class="ctrl-char-slot"><canvas id="ctrl-adv-canvas" width="240" height="100"></canvas><span class="ctrl-char-label">ADVENTURER</span></div>
+          <div class="ctrl-char-slot"><canvas id="ctrl-scout-canvas" width="188" height="100"></canvas><span class="ctrl-char-label">SCOUT</span></div>
+          <div class="ctrl-char-slot"><canvas id="ctrl-lancer-canvas" width="188" height="100"></canvas><span class="ctrl-char-label">LANCER</span></div>
+        </div>
+        <div class="ctrl-pickups-section">
+          <div class="ctrl-pickup-card">
+            <img id="ctrl-fireball-img" src="/fireball.gif" class="ctrl-pickup-gif" alt="fireball" />
+            <div class="ctrl-pickup-name">FIREBALL ORB</div>
+            <div class="ctrl-pickup-stat">40 DAMAGE</div>
+            <div class="ctrl-pickup-desc">Pick up orbs · throw with P</div>
+          </div>
+          <div class="ctrl-pickup-card">
+            <canvas id="ctrl-bomb-canvas" width="128" height="128" class="ctrl-pickup-canvas"></canvas>
+            <div class="ctrl-pickup-name">BOMB</div>
+            <div class="ctrl-pickup-stat">50 AOE DAMAGE</div>
+            <div class="ctrl-pickup-desc">Pick up bombs · throw with P</div>
+          </div>
+          <div class="ctrl-pickup-card">
+            <canvas id="ctrl-health-canvas" width="128" height="128" class="ctrl-pickup-canvas"></canvas>
+            <div class="ctrl-pickup-name">HEALTH PACK</div>
+            <div class="ctrl-pickup-stat">+20 HP</div>
+            <div class="ctrl-pickup-desc">Walk over to collect</div>
+          </div>
+        </div>
+      </div>
       <div class="onboarding-dots" id="onboarding-dots">
         <span class="onboarding-dot active"></span>
+        <span class="onboarding-dot"></span>
         <span class="onboarding-dot"></span>
         <span class="onboarding-dot"></span>
         <span class="onboarding-dot"></span>
@@ -68,6 +104,28 @@
       <input id="username-input" type="text" maxlength="16"
              placeholder="USERNAME" autocomplete="off" spellcheck="false" />
       <button id="login-btn">START</button>
+    </div>
+  </div>
+
+  <!-- ── CHARACTER SELECT SCREEN ── -->
+  <div id="character-select-screen" class="hidden">
+    <div class="char-select-bg">
+      <h1 class="char-select-title">CHOOSE YOUR FIGHTER</h1>
+      <div class="char-select-grid" id="char-select-grid"></div>
+      <button class="char-select-confirm-btn" id="char-select-confirm">PLAY AS ADVENTURER</button>
+    </div>
+  </div>
+
+  <!-- ── PRIVATE CODE MODAL ── -->
+  <div id="private-code-modal" class="hidden">
+    <div class="private-code-card">
+      <div class="private-code-title">PRIVATE ROOM</div>
+      <p class="private-code-sub">Enter the room code to join</p>
+      <input id="private-code-input" type="text" maxlength="8" placeholder="CODE" autocomplete="off" spellcheck="false" />
+      <div class="private-code-buttons">
+        <button id="private-code-confirm">CONFIRM</button>
+        <button id="private-code-cancel">CANCEL</button>
+      </div>
     </div>
   </div>
 

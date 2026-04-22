@@ -1074,3 +1074,373 @@ html, body {
   transform: translate(2px, 2px);
   box-shadow: 2px 2px 0 #7a6400;
 }
+
+/* ── ONBOARDING CONTROLS STEP ── */
+.onboarding-card.controls-mode {
+  width: min(1100px, 97vw);
+  max-height: 94vh;
+}
+
+#onboarding-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+#onboarding-controls.hidden { display: none; }
+
+/* Key bindings row */
+.ctrl-keys-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  justify-content: center;
+  background: #060606;
+  border: 1px solid #222;
+  padding: 12px 16px;
+}
+
+.ctrl-key-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ctrl-keys {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  background: #1a1a1a;
+  border: 2px solid #444;
+  box-shadow: 2px 2px 0 #000;
+  color: #ffd700;
+  padding: 5px 8px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.ctrl-arrow {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #555;
+}
+
+.ctrl-desc {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #ccc;
+  white-space: nowrap;
+}
+
+/* Character attack demos */
+.ctrl-char-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: flex-end;
+  background: #060606;
+  border: 1px solid #1a1a1a;
+  padding: 10px;
+}
+
+.ctrl-char-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.ctrl-char-slot canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  width: 100%;
+  height: auto;
+}
+
+.ctrl-char-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: #666;
+  letter-spacing: 1px;
+}
+
+/* Pickup cards */
+.ctrl-pickups-section {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.ctrl-pickup-card {
+  background: #060606;
+  border: 2px solid #1e1e1e;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px 16px;
+}
+
+.ctrl-pickup-canvas,
+.ctrl-pickup-gif {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  width: 100%;
+  max-width: 128px;
+  height: auto;
+}
+
+.ctrl-pickup-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #fff;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.ctrl-pickup-stat {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: #ffd700;
+  text-align: center;
+}
+
+.ctrl-pickup-desc {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: #777;
+  text-align: center;
+  line-height: 1.8;
+}
+
+/* ── CHARACTER SELECT SCREEN ── */
+#character-select-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: #050505;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+#character-select-screen.hidden { display: none; }
+
+.char-select-bg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 32px 32px 40px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.char-select-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(14px, 2vw, 22px);
+  color: #ffd700;
+  text-align: center;
+  letter-spacing: 2px;
+  text-shadow: 3px 3px 0 #7a6400;
+  margin: 0;
+}
+
+.char-select-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+.char-select-panel {
+  background: #0d0d0d;
+  border: 3px solid #2a2a2a;
+  padding: 20px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.char-select-panel:hover {
+  border-color: #555;
+  background: #111;
+  transform: translateY(-2px);
+}
+.char-select-panel.selected {
+  border-color: #c41230;
+  background: #140508;
+  box-shadow: 0 0 16px rgba(196, 18, 48, 0.25);
+}
+.char-select-panel canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.char-select-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  color: #fff;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.char-select-weapon {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #888;
+  text-align: center;
+}
+
+.char-select-stats {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.char-select-pros,
+.char-select-cons {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.char-select-pros li {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: #2ecc71;
+  padding-left: 10px;
+  position: relative;
+}
+.char-select-pros li::before { content: '+'; position: absolute; left: 0; color: #2ecc71; }
+
+.char-select-cons li {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: #e63946;
+  padding-left: 10px;
+  position: relative;
+}
+.char-select-cons li::before { content: '-'; position: absolute; left: 0; color: #e63946; }
+
+.char-select-confirm-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(10px, 1.2vw, 14px);
+  background: #ffd700;
+  color: #0a0a0a;
+  border: 3px solid #c9a800;
+  box-shadow: 4px 4px 0 #7a6400;
+  padding: 14px 32px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: filter 0.1s, transform 0.1s, box-shadow 0.1s;
+}
+.char-select-confirm-btn:hover { filter: brightness(1.1); }
+.char-select-confirm-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 #7a6400;
+}
+
+/* ── PRIVATE CODE MODAL ── */
+#private-code-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#private-code-modal.hidden { display: none; }
+
+.private-code-card {
+  background: #0d0d0d;
+  border: 3px solid #c41230;
+  box-shadow: 6px 6px 0 #000;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  min-width: 280px;
+}
+
+.private-code-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 13px;
+  color: #ffd700;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.private-code-sub {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #aaa;
+  text-align: center;
+  margin: 0;
+}
+
+#private-code-input {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  background: #000;
+  color: #fff;
+  border: 2px solid #c41230;
+  padding: 10px 16px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+}
+#private-code-input:focus { border-color: #ff4060; }
+
+.private-code-buttons {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+#private-code-confirm,
+#private-code-cancel {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  padding: 10px 0;
+  flex: 1;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: filter 0.1s, transform 0.1s;
+}
+#private-code-confirm {
+  background: #c41230;
+  color: #fff;
+  border: 2px solid #8b0c22;
+  box-shadow: 3px 3px 0 #000;
+}
+#private-code-confirm:hover { filter: brightness(1.15); }
+#private-code-confirm:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #000; }
+
+#private-code-cancel {
+  background: #1a1a1a;
+  color: #888;
+  border: 2px solid #333;
+  box-shadow: 3px 3px 0 #000;
+}
+#private-code-cancel:hover { filter: brightness(1.3); color: #ccc; }
+#private-code-cancel:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #000; }
+
+/* Private room card styling in browse */
+.room-card.private .room-code { color: #aaa; font-size: 7px; }
