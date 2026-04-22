@@ -1,5 +1,5 @@
 import { CHARACTERS, ClassData } from './data/Classes';
-import { createRoom, joinAnyRoom, joinRoom } from './network/Network';
+import { createRoom, joinAnyRoom, joinRoom, joinLobbyPresence, leaveLobbyPresence, getOnlineCount } from './network/Network';
 import { requireAuth, saveUserToSupabase, getClerk, fetchPlayerStats, fetchLeaderboard, PlayerStats, LeaderboardEntry } from './auth';
 
 const delay = (ms: number): Promise<void> => new Promise(r => setTimeout(r, ms));
@@ -670,6 +670,19 @@ function showLobby(username: string, resolve: (r: LobbyResult) => void, clerkId:
     joinStatus.textContent = '';
   });
 
+  // ── Live online player count (lobby + in-game) ──
+  const onlineCountEl = document.querySelector<HTMLElement>('#online-count .count-value');
+  async function refreshOnlineCount() {
+    if (!onlineCountEl) return;
+    const total = await getOnlineCount();
+    onlineCountEl.textContent = String(total);
+  }
+  // Kick off presence join + an eager first fetch in parallel; when the join
+  // resolves, refresh again so the bump from the current user shows immediately.
+  void joinLobbyPresence().then(() => { void refreshOnlineCount(); });
+  void refreshOnlineCount();
+  const onlineCountInterval = window.setInterval(refreshOnlineCount, 2000);
+
   // ── Browse rooms ──
   const browseBtn = document.getElementById('browse-btn');
   const roomBrowser = document.getElementById('room-browser');
@@ -760,6 +773,8 @@ function showLobby(username: string, resolve: (r: LobbyResult) => void, clerkId:
 
     const launchGame = async () => {
       if (browserInterval) { clearInterval(browserInterval); browserInterval = undefined; }
+      clearInterval(onlineCountInterval);
+      leaveLobbyPresence();
       playBtn.textContent = 'Game Found';
       playBtn.style.color = '#2ecc71';
       await delay(1000);
@@ -929,35 +944,58 @@ function renderLeaderboardPanel(entries: LeaderboardEntry[]): void {
     return;
   }
 
-  container.className = '';
-  container.innerHTML = `
-    <table class="leaderboard-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>PLAYER</th>
-          <th>KILLS</th>
-          <th>DEATHS</th>
-          <th>K/D</th>
-          <th>WINS</th>
-          <th>GAMES</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${entries.map((e, i) => {
-          const kd = (e.total_kills / Math.max(e.total_deaths, 1)).toFixed(2);
-          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
-          return `<tr class="${i < 3 ? 'leaderboard-top' : ''}">
-            <td>${medal}</td>
+  const topN = 10;
+  const medal = (i: number) => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+  const val = (e: LeaderboardEntry, k: keyof LeaderboardEntry) => (e[k] as number) ?? 0;
+
+  const makeTable = (
+    title: string,
+    sortKey: keyof LeaderboardEntry,
+    cols: { label: string; key: keyof LeaderboardEntry }[],
+  ) => {
+    const sorted = [...entries]
+      .sort((a, b) => val(b, sortKey) - val(a, sortKey))
+      .filter(e => val(e, sortKey) > 0)
+      .slice(0, topN);
+
+    if (!sorted.length) {
+      return `<div class="leaderboard-col">
+        <div class="leaderboard-col-title">${title}</div>
+        <div class="leaderboard-empty">No games played yet</div>
+      </div>`;
+    }
+
+    return `<div class="leaderboard-col">
+      <div class="leaderboard-col-title">${title}</div>
+      <table class="leaderboard-table">
+        <thead><tr><th>#</th><th>PLAYER</th>${cols.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>
+        <tbody>
+          ${sorted.map((e, i) => `<tr class="${i < 3 ? 'leaderboard-top' : ''}">
+            <td>${medal(i)}</td>
             <td>${e.username}</td>
-            <td>${e.total_kills}</td>
-            <td>${e.total_deaths}</td>
-            <td>${kd}</td>
-            <td>${e.total_wins}</td>
-            <td>${e.total_games}</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>
-  `;
+            ${cols.map(c => `<td>${val(e, c.key)}</td>`).join('')}
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  };
+
+  container.className = 'leaderboard-grid';
+  container.innerHTML =
+    makeTable('FREEPLAY', 'ffa_kills', [
+      { label: 'K', key: 'ffa_kills' },
+      { label: 'D', key: 'ffa_deaths' },
+      { label: 'W', key: 'ffa_wins' },
+    ]) +
+    makeTable('KILL CONFIRMED', 'kc_confirms', [
+      { label: 'CONF', key: 'kc_confirms' },
+      { label: 'D',    key: 'kc_deaths' },
+      { label: 'W',    key: 'kc_wins' },
+    ]) +
+    makeTable('OVERALL', 'total_kills', [
+      { label: 'K', key: 'total_kills' },
+      { label: 'D', key: 'total_deaths' },
+      { label: 'W', key: 'total_wins' },
+      { label: 'G', key: 'total_games' },
+    ]);
 }

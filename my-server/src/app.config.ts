@@ -12,6 +12,7 @@ import {
  * Import your Room files
  */
 import { MyRoom } from "./rooms/MyRoom.js";
+import { LobbyRoom } from "./rooms/LobbyRoom.js";
 import prisma from "./db.js";
 
 const server = defineServer({
@@ -20,7 +21,8 @@ const server = defineServer({
      * Define your room handlers:
      */
     rooms: {
-        my_room: defineRoom(MyRoom, { filterBy: ['isPrivate', 'gameMode'] })
+        my_room: defineRoom(MyRoom, { filterBy: ['isPrivate', 'gameMode'] }),
+        lobby_room: defineRoom(LobbyRoom)
     },
 
     /**
@@ -65,6 +67,18 @@ const server = defineServer({
             }
         });
 
+        // Total online across lobby + game rooms
+        app.get("/api/online", async (_req, res) => {
+            try {
+                const rooms = await matchMaker.query({});
+                const total = rooms.reduce((sum: number, r: any) => sum + (r.clients || 0), 0);
+                res.json({ total });
+            } catch (err) {
+                console.error("[api] /api/online error:", err);
+                res.json({ total: 0 });
+            }
+        });
+
         // ── Player stats API ──────────────────────────────────────────────
 
         // Sync user record on login (creates or updates username)
@@ -106,12 +120,11 @@ const server = defineServer({
             }
         });
 
-        // Global leaderboard — top 20 players by total kills
+        // Global leaderboard — returns per-mode + overall stats; client sorts each column
         app.get("/api/leaderboard", async (_req: any, res: any) => {
             try {
                 const rows = await prisma.playerStats.findMany({
-                    take: 20,
-                    orderBy: { totalKills: 'desc' },
+                    take: 50,
                     include: { user: { select: { username: true } } },
                 });
                 res.json(rows.map((r: any) => ({
@@ -120,6 +133,15 @@ const server = defineServer({
                     total_deaths: r.totalDeaths,
                     total_wins:   r.totalWins,
                     total_games:  r.totalGames,
+                    ffa_kills:    r.ffaKills,
+                    ffa_deaths:   r.ffaDeaths,
+                    ffa_wins:     r.ffaWins,
+                    ffa_games:    r.ffaGames,
+                    kc_confirms:  r.kcConfirms,
+                    kc_kills:     r.kcKills,
+                    kc_deaths:    r.kcDeaths,
+                    kc_wins:      r.kcWins,
+                    kc_games:     r.kcGames,
                 })));
             } catch (err) {
                 console.error("[api] /api/leaderboard error:", err);

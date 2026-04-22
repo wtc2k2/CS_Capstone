@@ -506,6 +506,31 @@ export class MyRoom extends Room {
       const won = this.gameMode === 'killConfirmed'
         ? (player.confirmedKills === topKills && topKills >= 0)
         : (player.kills === topKills && topKills >= 0);
+      const isKC     = this.gameMode === 'killConfirmed';
+      const kills    = player.kills;
+      const confirms = player.confirmedKills;
+      const deaths   = player.deaths;
+      const winInc   = won ? 1 : 0;
+
+      const modeCreate = isKC
+        ? { kcConfirms: confirms, kcKills: kills, kcDeaths: deaths, kcGames: 1, kcWins: winInc }
+        : { ffaKills: kills, ffaDeaths: deaths, ffaGames: 1, ffaWins: winInc };
+
+      const modeUpdate = isKC
+        ? {
+            kcConfirms: { increment: confirms },
+            kcKills:    { increment: kills },
+            kcDeaths:   { increment: deaths },
+            kcGames:    { increment: 1 },
+            kcWins:     { increment: winInc },
+          }
+        : {
+            ffaKills:  { increment: kills },
+            ffaDeaths: { increment: deaths },
+            ffaGames:  { increment: 1 },
+            ffaWins:   { increment: winInc },
+          };
+
       saves.push(
         (async () => {
           try {
@@ -520,19 +545,21 @@ export class MyRoom extends Room {
               where: { clerkId },
               create: {
                 clerkId,
-                totalKills: player.kills,
-                totalDeaths: player.deaths,
+                totalKills: kills,
+                totalDeaths: deaths,
                 totalGames: 1,
-                totalWins: won ? 1 : 0,
+                totalWins: winInc,
+                ...modeCreate,
               },
               update: {
-                totalKills:  { increment: player.kills },
-                totalDeaths: { increment: player.deaths },
+                totalKills:  { increment: kills },
+                totalDeaths: { increment: deaths },
                 totalGames:  { increment: 1 },
-                totalWins:   { increment: won ? 1 : 0 },
+                totalWins:   { increment: winInc },
+                ...modeUpdate,
               },
             });
-            console.log(`[stats] saved for ${player.name} — K:${player.kills} D:${player.deaths} W:${won}`);
+            console.log(`[stats] saved for ${player.name} — mode:${isKC ? 'KC' : 'FFA'} K:${kills} C:${confirms} D:${deaths} W:${won}`);
           } catch (err) {
             console.error(`[stats] failed for ${player.name}:`, err);
           }

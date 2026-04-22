@@ -18,7 +18,7 @@ initLobby().catch((err) => console.error('[CC] initLobby failed:', err)).then(({
     scene: [GameScene, HUDScene],
     scale: {
       mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
+      autoCenter: Phaser.Scale.CENTER_HORIZONTALLY,
     },
   };
 

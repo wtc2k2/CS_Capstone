@@ -21,7 +21,7 @@ html, body {
 #game-container {
   display: none;
   width: 100vw; height: 100vh;
-  align-items: center; justify-content: center;
+  align-items: flex-start; justify-content: center;
 }
 #game-container canvas {
   image-rendering: pixelated;
@@ -270,18 +270,19 @@ html, body {
 
 /* ── Left: retro control panel ── */
 .lobby-control-panel {
-  width: 360px; flex-shrink: 0;
-  display: flex; flex-direction: column; justify-content: center;
-  gap: 22px;
-  padding: 36px 28px;
+  width: 720px; flex-shrink: 0;
+  display: flex; flex-direction: column; justify-content: flex-start;
+  gap: 14px;
+  padding: 20px 40px 16px;
   background: rgba(10, 10, 10, 0.62);
   border-right: 3px solid #1a1a1a;
+  overflow-y: auto;
 }
 
 .panel-title {
-  font-size: 24px; line-height: 1.5; letter-spacing: 2px;
+  font-size: 32px; line-height: 1.35; letter-spacing: 3px;
   color: #c41230;
-  text-shadow: 3px 3px 0 #000, -1px -1px 0 #7a0a1a;
+  text-shadow: 4px 4px 0 #000, -1px -1px 0 #7a0a1a;
 }
 
 .panel-divider {
@@ -297,9 +298,9 @@ html, body {
 }
 
 .mode-btn {
-  flex: 1; padding: 14px 0;
+  flex: 1; padding: 16px 0;
   background: #0d0d0d; border: none;
-  color: #666676; font-family: inherit; font-size: 10px;
+  color: #666676; font-family: inherit; font-size: 14px;
   letter-spacing: 2px; cursor: pointer;
   transition: background 0.1s, color 0.1s;
   text-transform: uppercase;
@@ -314,14 +315,42 @@ html, body {
 
 /* ── Sub-options ── */
 .sub-options {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.host-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  width: 100%;
+  min-width: 0;
+}
+.host-row .sub-label,
+.host-row .max-players-label {
+  flex: 0 0 auto;
+  min-width: 64px;
+  white-space: nowrap;
+}
+.host-row .game-mode-selector,
+.host-row .player-count-selector {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.host-row .game-mode-btn,
+.host-row .player-count-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sub-btn {
-  padding: 9px 14px;
+  padding: 11px 18px;
   background: #0d0d0d; border: 2px solid #2a2a2a;
-  color: #666676; font-family: inherit; font-size: 8px;
-  letter-spacing: 1px; cursor: pointer;
+  color: #666676; font-family: inherit; font-size: 13px;
+  letter-spacing: 1.5px; cursor: pointer;
   transition: background 0.1s, color 0.1s, border-color 0.1s;
   text-transform: uppercase;
 }
@@ -340,7 +369,7 @@ html, body {
 
 /* Sub label */
 .sub-label {
-  font-size: 8px; letter-spacing: 1.5px; color: #666676; white-space: nowrap;
+  font-size: 12px; letter-spacing: 2px; color: #666676; white-space: nowrap;
 }
 
 /* Game mode selector */
@@ -352,14 +381,14 @@ html, body {
 }
 .game-mode-btn {
   flex: 1;
-  padding: 7px 10px;
+  padding: 10px 12px;
   background: #0d0d0d;
   border: none;
   border-right: 1px solid #2a2a2a;
   color: #666676;
   font-family: inherit;
-  font-size: 8px;
-  letter-spacing: 1px;
+  font-size: 12px;
+  letter-spacing: 1.5px;
   cursor: pointer;
   transition: background 0.1s, color 0.1s;
   text-transform: uppercase;
@@ -406,7 +435,7 @@ html, body {
 
 /* Max Players */
 .max-players-label {
-  font-size: 8px; letter-spacing: 1.5px; color: #666676; white-space: nowrap;
+  font-size: 12px; letter-spacing: 2px; color: #666676; white-space: nowrap;
 }
 
 .player-count-selector {
@@ -414,10 +443,10 @@ html, body {
 }
 
 .player-count-btn {
-  padding: 7px 10px;
+  padding: 10px 14px;
   background: #0d0d0d; border: none; border-right: 1px solid #2a2a2a;
-  color: #666676; font-family: inherit; font-size: 8px;
-  letter-spacing: 1px; cursor: pointer;
+  color: #666676; font-family: inherit; font-size: 12px;
+  letter-spacing: 1.5px; cursor: pointer;
   transition: background 0.1s, color 0.1s;
 }
 .player-count-btn:last-child { border-right: none; }
@@ -426,15 +455,15 @@ html, body {
 
 /* ── PLAY button ── */
 .play-btn {
-  width: 100%; padding: 18px 0;
+  width: 100%; padding: 20px 0;
   background: #ffd700;
   border: 3px solid #c9a800;
   box-shadow: 5px 5px 0 #7a6400;
-  color: #0a0a0a; font-family: inherit; font-size: 14px;
-  letter-spacing: 4px; cursor: pointer; text-transform: uppercase;
+  color: #0a0a0a; font-family: inherit; font-size: 20px;
+  letter-spacing: 5px; cursor: pointer; text-transform: uppercase;
   transition: filter 0.1s, transform 0.1s, box-shadow 0.1s;
   animation: pulse-play 1.8s steps(4) infinite;
-  margin-top: 6px;
+  margin-top: 0;
 }
 .play-btn:hover { filter: brightness(1.1); animation: none; }
 .play-btn:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 #7a6400; }
@@ -542,6 +571,9 @@ html, body {
 .stats-panel-inner {
   max-width: 720px; margin: 0 auto;
 }
+#leaderboard-panel .stats-panel-inner {
+  max-width: none; width: 100%;
+}
 .stats-panel-title {
   font-size: 18px; letter-spacing: 4px; color: #c41230;
   text-shadow: 3px 3px 0 #000;
@@ -627,6 +659,31 @@ html, body {
   background: #1a1a2e;
 }
 
+.leaderboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+.leaderboard-col { min-width: 0; }
+.leaderboard-col-title {
+  font-size: 11px; letter-spacing: 3px; color: #c41230;
+  margin-bottom: 8px; padding-bottom: 6px;
+  border-bottom: 2px solid #c41230;
+  text-shadow: 2px 2px 0 #000;
+  text-align: center;
+}
+.leaderboard-grid .leaderboard-table { font-size: 10px; width: 100%; }
+.leaderboard-grid .leaderboard-table th,
+.leaderboard-grid .leaderboard-table td { padding: 6px 6px; }
+.leaderboard-empty {
+  color: #666; font-size: 9px; letter-spacing: 1px;
+  text-align: center; padding: 16px 8px;
+}
+@media (max-width: 900px) {
+  .leaderboard-grid { grid-template-columns: 1fr; }
+}
+
 .locker-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -677,6 +734,24 @@ html, body {
 .stat-value {
   font-size: 10px; color: #aaaab8; min-width: 28px;
   text-align: right; font-weight: bold;
+}
+
+/* ═══════════════════════════════════════
+   LOBBY: ONLINE COUNT
+═══════════════════════════════════════ */
+#online-count {
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: #666676;
+  text-align: center;
+  white-space: nowrap;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+#online-count .count-value {
+  color: #a8dadc;
+  font-weight: bold;
+  font-size: 16px;
 }
 
 /* ═══════════════════════════════════════

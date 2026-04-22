@@ -18,10 +18,23 @@ model User {
 
 model PlayerStats {
   clerkId     String   @id @map("clerk_id")
+
   totalKills  Int      @default(0) @map("total_kills")
   totalDeaths Int      @default(0) @map("total_deaths")
   totalGames  Int      @default(0) @map("total_games")
   totalWins   Int      @default(0) @map("total_wins")
+
+  ffaKills    Int      @default(0) @map("ffa_kills")
+  ffaDeaths   Int      @default(0) @map("ffa_deaths")
+  ffaGames    Int      @default(0) @map("ffa_games")
+  ffaWins     Int      @default(0) @map("ffa_wins")
+
+  kcConfirms  Int      @default(0) @map("kc_confirms")
+  kcKills     Int      @default(0) @map("kc_kills")
+  kcDeaths    Int      @default(0) @map("kc_deaths")
+  kcGames     Int      @default(0) @map("kc_games")
+  kcWins      Int      @default(0) @map("kc_wins")
+
   updatedAt   DateTime @updatedAt @map("updated_at")
   user        User     @relation(fields: [clerkId], references: [clerkId], onDelete: Cascade)
 

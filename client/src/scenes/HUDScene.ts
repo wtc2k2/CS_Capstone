@@ -129,7 +129,7 @@ export class HUDScene extends Phaser.Scene {
     }).setOrigin(0.5).setVisible(false);
 
     // Controls legend
-    this.controlsText = this.add.text(width / 2, height - 28, 'WASD: Move  |  O: Attack  |  SPACE: Dash  |  P: Fireball', {
+    this.controlsText = this.add.text(width / 2, height - 48, 'WASD: Move  |  O: Attack  |  SPACE: Dash  |  P: Fireball', {
       fontFamily: 'Courier New, monospace',
       fontSize: '18px',
       color: '#a8dadc',
@@ -155,7 +155,7 @@ export class HUDScene extends Phaser.Scene {
     }).setVisible(false);
 
     // Room status (bottom left) — visible during both phases
-    this.roomCodeText = this.add.text(16, height - 60, '', {
+    this.roomCodeText = this.add.text(16, height - 80, '', {
       fontFamily: 'Courier New, monospace',
       fontSize: '22px',
       color: '#00ff00',
@@ -186,7 +186,7 @@ export class HUDScene extends Phaser.Scene {
     this.mmContainer.setVisible(false);
 
     // Return to lobby button (always visible)
-    this.lobbyBtn = this.createButton(width - 172, height - 60, '← LOBBY', 0x1a3a7a, () => {
+    this.lobbyBtn = this.createButton(width - 172, height - 80, '← LOBBY', 0x1a3a7a, () => {
       leaveRoom();
       window.location.reload();
     });
@@ -351,7 +351,7 @@ export class HUDScene extends Phaser.Scene {
     this.roomCodeText.setText(`ROOM: ${roomCode}`).setColor('#00ff00');
 
     // Copy code button next to room code (all players)
-    const copyBtn = this.createButton(164, height - 36, 'COPY CODE', 0x1a4a2a, () => {
+    const copyBtn = this.createButton(164, height - 56, 'COPY CODE', 0x1a4a2a, () => {
       navigator.clipboard.writeText(this.currentRoomCode).then(() => {
         this.roomCodeText.setText('COPIED!').setColor('#f5c518');
         this.time.delayedCall(1500, () => {
@@ -809,7 +809,7 @@ export class HUDScene extends Phaser.Scene {
   private createInventoryBox(): void {
     const { width, height } = this.scale;
     const cx = width / 2;
-    const cy = height - 72;
+    const cy = height - 92;
 
     const container = this.add.container(cx, cy);
     container.setDepth(10).setScrollFactor(0);
@@ -932,7 +932,7 @@ export class HUDScene extends Phaser.Scene {
     const weaponLabel = weapon === 'fireball' ? 'Fireball' : 'Melee';
     const msg = `${killerName}  [${weaponLabel}]  ${victimName}`;
 
-    const text = this.add.text(width - 16, height - 70, msg, {
+    const text = this.add.text(width - 16, height - 90, msg, {
       fontFamily: 'monospace',
       fontSize: '14px',
       color: '#ffffff',
