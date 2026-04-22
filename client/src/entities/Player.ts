@@ -195,23 +195,43 @@ export class Player {
     }
 
     const dist = this.speed * speedMult * (delta / 1000);
-    const newX = this.sprite.x + moveX * dist;
-    const newY = this.sprite.y + moveY * dist;
-
     const half = 15; // accurate to 32px sprite (±16), 1px inset
 
-    if (this.canMove(newX, this.sprite.y, half)) {
-      this.sprite.x = newX;
-      this.bounceRemainX = 0;
-    } else if (isMoving && !this.isDashing) {
-      this.bounceRemainX = -moveX * Player.BOUNCE_DIST;
+    // Sub-step movement so fast moves (dash, frame drops) can't skip past
+    // a thin wall tile in one frame. Each sub-step is ≤ 8px (half a tile).
+    const MAX_STEP = 8;
+    const numSteps = Math.max(1, Math.ceil(dist / MAX_STEP));
+    const stepX = (moveX * dist) / numSteps;
+    const stepY = (moveY * dist) / numSteps;
+
+    let xMoved = false;
+    let yMoved = false;
+    let xBlocked = false;
+    let yBlocked = false;
+    for (let i = 0; i < numSteps; i++) {
+      if (!xBlocked) {
+        if (this.canMove(this.sprite.x + stepX, this.sprite.y, half)) {
+          this.sprite.x += stepX;
+          xMoved = true;
+        } else {
+          xBlocked = true;
+        }
+      }
+      if (!yBlocked) {
+        if (this.canMove(this.sprite.x, this.sprite.y + stepY, half)) {
+          this.sprite.y += stepY;
+          yMoved = true;
+        } else {
+          yBlocked = true;
+        }
+      }
+      if (xBlocked && yBlocked) break;
     }
-    if (this.canMove(this.sprite.x, newY, half)) {
-      this.sprite.y = newY;
-      this.bounceRemainY = 0;
-    } else if (isMoving && !this.isDashing) {
-      this.bounceRemainY = -moveY * Player.BOUNCE_DIST;
-    }
+
+    if (xMoved) this.bounceRemainX = 0;
+    else if (isMoving && !this.isDashing) this.bounceRemainX = -moveX * Player.BOUNCE_DIST;
+    if (yMoved) this.bounceRemainY = 0;
+    else if (isMoving && !this.isDashing) this.bounceRemainY = -moveY * Player.BOUNCE_DIST;
 
     // Step toward remaining bounce distance at fixed speed
     const maxStep = Player.BOUNCE_SPEED * (delta / 1000);
@@ -237,7 +257,7 @@ export class Player {
     }
   }
 
-  private canMove(px: number, py: number, half: number): boolean {
+  canMove(px: number, py: number, half: number): boolean {
     const corners = [
       { x: px - half, y: py - half },
       { x: px + half, y: py - half },
@@ -250,6 +270,10 @@ export class Player {
       if (!isWalkable(tx, ty)) return false;
     }
     return true;
+  }
+
+  isStuckInWall(): boolean {
+    return !this.canMove(this.sprite.x, this.sprite.y, 15);
   }
 
   dash(time: number): void {

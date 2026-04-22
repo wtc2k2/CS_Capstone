@@ -871,9 +871,11 @@ export class GameScene extends Phaser.Scene {
         this.lastSendTime = time;
       }
 
-      // Player-to-player collision: push local player out of remote player bodies
+      // Player-to-player collision: push local player out of remote player bodies,
+      // but validate against tile collision so we never land inside a wall.
       if (this.gamePhase === 'playing') {
         const MIN_DIST = 28; // ~2× the half-size of a player sprite (14px radius each)
+        const half = 15;
         this.remotePlayers.forEach(rp => {
           if (!rp.alive) return;
           const dx = this.player.sprite.x - rp.sprite.x;
@@ -882,10 +884,25 @@ export class GameScene extends Phaser.Scene {
           if (distSq > 0 && distSq < MIN_DIST * MIN_DIST) {
             const dist = Math.sqrt(distSq);
             const push = (MIN_DIST - dist) / dist;
-            this.player.sprite.x += dx * push;
-            this.player.sprite.y += dy * push;
+            const pushX = dx * push;
+            const pushY = dy * push;
+            // Axis-split so we can still slide along a wall when pushed against it.
+            if (this.player.canMove(this.player.sprite.x + pushX, this.player.sprite.y, half)) {
+              this.player.sprite.x += pushX;
+            }
+            if (this.player.canMove(this.player.sprite.x, this.player.sprite.y + pushY, half)) {
+              this.player.sprite.y += pushY;
+            }
           }
         });
+      }
+
+      // Unstick safety net — if we somehow ended up inside a blocked tile
+      // (dash at a network spike, bitmask desync, etc), snap to the nearest safe tile.
+      if (this.gamePhase === 'playing' && this.player.alive && this.player.isStuckInWall()) {
+        const safe = findSafeSpawn(this.player.sprite.x, this.player.sprite.y);
+        this.player.sprite.x = safe.x;
+        this.player.sprite.y = safe.y;
       }
     }
 
