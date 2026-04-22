@@ -120,12 +120,11 @@ const server = defineServer({
             }
         });
 
-        // Global leaderboard — top 20 players by total kills
+        // Global leaderboard — returns per-mode + overall stats; client sorts each column
         app.get("/api/leaderboard", async (_req: any, res: any) => {
             try {
                 const rows = await prisma.playerStats.findMany({
-                    take: 20,
-                    orderBy: { totalKills: 'desc' },
+                    take: 50,
                     include: { user: { select: { username: true } } },
                 });
                 res.json(rows.map((r: any) => ({
@@ -134,6 +133,15 @@ const server = defineServer({
                     total_deaths: r.totalDeaths,
                     total_wins:   r.totalWins,
                     total_games:  r.totalGames,
+                    ffa_kills:    r.ffaKills,
+                    ffa_deaths:   r.ffaDeaths,
+                    ffa_wins:     r.ffaWins,
+                    ffa_games:    r.ffaGames,
+                    kc_confirms:  r.kcConfirms,
+                    kc_kills:     r.kcKills,
+                    kc_deaths:    r.kcDeaths,
+                    kc_wins:      r.kcWins,
+                    kc_games:     r.kcGames,
                 })));
             } catch (err) {
                 console.error("[api] /api/leaderboard error:", err);

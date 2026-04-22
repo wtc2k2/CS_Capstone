@@ -211,6 +211,15 @@ export interface LeaderboardEntry {
   total_deaths: number;
   total_wins: number;
   total_games: number;
+  ffa_kills?: number;
+  ffa_deaths?: number;
+  ffa_wins?: number;
+  ffa_games?: number;
+  kc_confirms?: number;
+  kc_kills?: number;
+  kc_deaths?: number;
+  kc_wins?: number;
+  kc_games?: number;
 }
 
 export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
