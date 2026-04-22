@@ -12,6 +12,7 @@ import {
  * Import your Room files
  */
 import { MyRoom } from "./rooms/MyRoom.js";
+import { LobbyRoom } from "./rooms/LobbyRoom.js";
 import prisma from "./db.js";
 
 const server = defineServer({
@@ -20,7 +21,8 @@ const server = defineServer({
      * Define your room handlers:
      */
     rooms: {
-        my_room: defineRoom(MyRoom, { filterBy: ['isPrivate', 'gameMode'] })
+        my_room: defineRoom(MyRoom, { filterBy: ['isPrivate', 'gameMode'] }),
+        lobby_room: defineRoom(LobbyRoom)
     },
 
     /**
@@ -62,6 +64,18 @@ const server = defineServer({
             } catch (err) {
                 console.error("[api] /api/rooms error:", err);
                 res.json([]);
+            }
+        });
+
+        // Total online across lobby + game rooms
+        app.get("/api/online", async (_req, res) => {
+            try {
+                const rooms = await matchMaker.query({});
+                const total = rooms.reduce((sum: number, r: any) => sum + (r.clients || 0), 0);
+                res.json({ total });
+            } catch (err) {
+                console.error("[api] /api/online error:", err);
+                res.json({ total: 0 });
             }
         });
 

@@ -148,6 +148,52 @@ export async function getAvailableRooms(): Promise<any[]> {
   return Array.isArray(data) ? data : [];
 }
 
+export async function getOnlineCount(): Promise<number> {
+  const httpUrl = SERVER_URL.replace('wss://', 'https://').replace('ws://', 'http://');
+  try {
+    const res = await fetch(`${httpUrl}/api/online`);
+    const data = await res.json();
+    return typeof data?.total === 'number' ? data.total : 0;
+  } catch {
+    return 0;
+  }
+}
+
+let lobbyPresenceRoom: Room | undefined;
+let lobbyPresencePending = false;
+let lobbyShouldLeave = false;
+
+export async function joinLobbyPresence(): Promise<void> {
+  if (lobbyPresenceRoom || lobbyPresencePending) return;
+  lobbyPresencePending = true;
+  lobbyShouldLeave = false;
+  try {
+    const c = initClient();
+    const room = await c.joinOrCreate('lobby_room');
+    if (lobbyShouldLeave) {
+      // leave() was called while we were connecting — disconnect immediately
+      try { room.leave(true); } catch {}
+    } else {
+      lobbyPresenceRoom = room;
+      room.onLeave(() => { lobbyPresenceRoom = undefined; });
+    }
+  } catch (err) {
+    console.warn('lobby presence join failed', err);
+  } finally {
+    lobbyPresencePending = false;
+  }
+}
+
+export function leaveLobbyPresence(): void {
+  if (lobbyPresencePending) {
+    lobbyShouldLeave = true;
+    return;
+  }
+  if (!lobbyPresenceRoom) return;
+  try { lobbyPresenceRoom.leave(true); } catch {}
+  lobbyPresenceRoom = undefined;
+}
+
 export async function joinRoomById(roomId: string, name: string, spriteKey = 'adventurer', clerkId = ''): Promise<Room> {
   const c = initClient();
   const r = await c.joinById(roomId, { name, spriteKey, clerkId });

@@ -1,5 +1,5 @@
 import { CHARACTERS, ClassData } from './data/Classes';
-import { createRoom, joinAnyRoom, joinRoom } from './network/Network';
+import { createRoom, joinAnyRoom, joinRoom, joinLobbyPresence, leaveLobbyPresence, getOnlineCount } from './network/Network';
 import { requireAuth, saveUserToSupabase, getClerk, fetchPlayerStats, fetchLeaderboard, PlayerStats, LeaderboardEntry } from './auth';
 
 const delay = (ms: number): Promise<void> => new Promise(r => setTimeout(r, ms));
@@ -670,18 +670,13 @@ function showLobby(username: string, resolve: (r: LobbyResult) => void, clerkId:
     joinStatus.textContent = '';
   });
 
-  // ── Live online player count ──
+  // ── Live online player count (lobby + in-game) ──
+  void joinLobbyPresence();
   const onlineCountEl = document.querySelector<HTMLElement>('#online-count .count-value');
   async function refreshOnlineCount() {
     if (!onlineCountEl) return;
-    try {
-      const { getAvailableRooms } = await import('./network/Network');
-      const rooms = await getAvailableRooms();
-      const total = rooms.reduce((sum: number, r: any) => sum + (r.clients || 0), 0);
-      onlineCountEl.textContent = String(total);
-    } catch {
-      // silent — keep last known value
-    }
+    const total = await getOnlineCount();
+    onlineCountEl.textContent = String(total);
   }
   void refreshOnlineCount();
   const onlineCountInterval = window.setInterval(refreshOnlineCount, 5000);
@@ -777,6 +772,7 @@ function showLobby(username: string, resolve: (r: LobbyResult) => void, clerkId:
     const launchGame = async () => {
       if (browserInterval) { clearInterval(browserInterval); browserInterval = undefined; }
       clearInterval(onlineCountInterval);
+      leaveLobbyPresence();
       playBtn.textContent = 'Game Found';
       playBtn.style.color = '#2ecc71';
       await delay(1000);
