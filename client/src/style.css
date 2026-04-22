@@ -680,6 +680,24 @@ html, body {
 }
 
 /* ═══════════════════════════════════════
+   LOBBY: ONLINE COUNT
+═══════════════════════════════════════ */
+#online-count {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: #666676;
+  text-align: center;
+  white-space: nowrap;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+#online-count .count-value {
+  color: #a8dadc;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+/* ═══════════════════════════════════════
    LANDING SCREEN
 ═══════════════════════════════════════ */
 #landing-screen {
