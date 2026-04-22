@@ -21,7 +21,7 @@ html, body {
 #game-container {
   display: none;
   width: 100vw; height: 100vh;
-  align-items: center; justify-content: center;
+  align-items: flex-start; justify-content: center;
 }
 #game-container canvas {
   image-rendering: pixelated;
@@ -315,7 +315,19 @@ html, body {
 
 /* ── Sub-options ── */
 .sub-options {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.host-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.host-row .sub-label,
+.host-row .max-players-label {
+  min-width: 56px;
+}
+.host-row .game-mode-selector,
+.host-row .player-count-selector {
+  flex: 1;
 }
 
 .sub-btn {
