@@ -671,15 +671,17 @@ function showLobby(username: string, resolve: (r: LobbyResult) => void, clerkId:
   });
 
   // ── Live online player count (lobby + in-game) ──
-  void joinLobbyPresence();
   const onlineCountEl = document.querySelector<HTMLElement>('#online-count .count-value');
   async function refreshOnlineCount() {
     if (!onlineCountEl) return;
     const total = await getOnlineCount();
     onlineCountEl.textContent = String(total);
   }
+  // Kick off presence join + an eager first fetch in parallel; when the join
+  // resolves, refresh again so the bump from the current user shows immediately.
+  void joinLobbyPresence().then(() => { void refreshOnlineCount(); });
   void refreshOnlineCount();
-  const onlineCountInterval = window.setInterval(refreshOnlineCount, 5000);
+  const onlineCountInterval = window.setInterval(refreshOnlineCount, 2000);
 
   // ── Browse rooms ──
   const browseBtn = document.getElementById('browse-btn');
