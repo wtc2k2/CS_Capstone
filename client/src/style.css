@@ -130,6 +130,16 @@ html, body {
 #login-btn:hover { filter: brightness(1.1); }
 #login-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #7a6400; }
 
+.username-error {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #e63946;
+  text-align: center;
+  min-height: 18px;
+  margin: 0;
+  line-height: 1.6;
+}
+
 @keyframes shake {
   0%,100% { transform: translateX(0); }
   25%      { transform: translateX(-5px); }

@@ -598,9 +598,6 @@ export class MyRoom extends Room {
   async onCreate (options: any) {
     this.roomId = makeRoomCode();       // sets the actual room ID used by joinById
     this.state.roomCode = this.roomId;  // synced to clients for display
-    if (options?.isPrivate === true) {
-      await this.setPrivate(true);
-    }
     const requestedMax = Number(options?.maxPlayers);
     const validated = VALID_MAX_PLAYERS.includes(requestedMax) ? requestedMax : 10;
     this.maxClients = validated;

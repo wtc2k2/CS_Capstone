@@ -85,6 +85,21 @@ const USERNAME_KEY = 'cc_username';
 const CHARACTER_KEY = 'cc_character';
 const LANDING_KEY = 'cc_seen_landing';
 
+const BLOCKED_WORDS = [
+  'fuck','shit','bitch','cunt','cock','dick','pussy','ass','bastard',
+  'whore','slut','piss','arse','twat','wank','nigger','nigga',
+  'faggot','fag','retard','rape','nazi','porn','sex','nude','naked',
+  'penis','vagina','boob','tit','cum','kill','murder','suicide',
+  'drug','weed','meth','crack',
+];
+
+function containsBlockedWord(name: string): boolean {
+  const normalized = name.toLowerCase()
+    .replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e')
+    .replace(/4/g, 'a').replace(/5/g, 's').replace(/@/g, 'a').replace(/\$/g, 's');
+  return BLOCKED_WORDS.some(w => normalized.includes(w));
+}
+
 interface OnboardingStep {
   title: string;
   image: string;
@@ -356,11 +371,20 @@ function showLogin(resolve: (r: LobbyResult) => void, clerkId: string, email: st
 
   const submit = async () => {
     const name = input.value.trim().slice(0, 16);
+    const errEl = document.getElementById('username-error')!;
     if (!name) {
       input.classList.add('shake');
       setTimeout(() => input.classList.remove('shake'), 400);
       return;
     }
+    if (containsBlockedWord(name)) {
+      input.classList.add('shake');
+      setTimeout(() => input.classList.remove('shake'), 400);
+      errEl.textContent = 'Please choose an appropriate username.';
+      setTimeout(() => { errEl.textContent = ''; }, 3000);
+      return;
+    }
+    errEl.textContent = '';
     localStorage.setItem(USERNAME_KEY, name);
     void saveUserToSupabase(clerkId, name, email);
     screen.classList.add('hidden');
